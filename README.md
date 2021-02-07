@@ -72,7 +72,7 @@ Rat genome annotation: \
 Conda environment and dependencies
 
 ## Activity Log
-### 02/11/2021
+### 02/06/2021
 Uploaded the following files:
 - all/**all_manifest.xlsx**
 - carpenter/scripts/**carpenter_01_fastq_02_trimmed_fastq.py**
