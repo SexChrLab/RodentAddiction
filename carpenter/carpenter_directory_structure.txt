@@ -11,8 +11,8 @@ necessarily in alphabetical order.
 └── carpenter
     ├── carpenter_manifest.csv
     └── 01_fastq
-    |   ├── carpenter_{sample}_fq1.fq
-    |   ├── carpenter_{sample}_fq2.fq
+    |   ├── carpenter_{sample}_fq1.fastq
+    |   ├── carpenter_{sample}_fq2.fastq
     |   └── quality_control
     |       ├── carpenter_{sample}_fq1_fastqc.html
     |       ├── carpenter_{sample}_fq2_fastqc.html
@@ -26,10 +26,10 @@ necessarily in alphabetical order.
     |           ├── multiqc_general_stats.txt
     |           └── multiqc_sources.txt
     ├── 02_trimmed_fastq
-    |   ├── carpenter_{sample}_trim_fq1.fq
-    |   ├── carpenter_{sample}_trim_fq2.fq
-    |   ├── carpenter_{sample}_trim_unpair_fq1.fq
-    |   ├── carpenter_{sample}_trim_unpair_fq2.fq
+    |   ├── carpenter_{sample}_trim_fq1.fastq
+    |   ├── carpenter_{sample}_trim_fq2.fastq
+    |   ├── carpenter_{sample}_trim_unpair_fq1.fastq
+    |   ├── carpenter_{sample}_trim_unpair_fq2.fastq
     |   ├── logfiles
     |   |   └── carpenter_{sample}_trimmomatic.log
     |   └── quality_control
