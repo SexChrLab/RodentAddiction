@@ -184,19 +184,19 @@ hisat2-build -p 16 --exon Rn6_exons.exon --ss Rn6_splice_sites.ss Rn6_genome.fa 
 ```
 
 ### Workflow, Script Order, and Output Directory Structure
-The RNA-seq workflow will create a directory that follows the structure outlined in the file **ADD FILE**. Because Snakemake creates directories as it runs, the only directories that must be created in advance are the reference directories and the following:
+The RNA-seq workflow will create directories for each dataset that follow the structures outlined in their respective .txt files. Because Snakemake creates directories as it runs, the only directories that must be created in advance are the reference directories and the following:
 - carpenter/01_fastq
 - powell/01_fastq/by_run
 - walker/01_fastq/by_run
 - walker/01_fastq/concatenated
 
 Raw FASTQ files should be named according to the following conventions: \
-Samples with 1 run: *{paper}_{SRA_Sample_ID}_{Treatment_Group}.fq* \
-Samples with multiple runs: *{paper}_{SRA_Sample_ID}_{Treatment_Group}_run{#}.fq* \
+Samples with 1 run: **{paper}\_{SRA_Sample_ID}\_{Treatment_Group}.fq** \
+Samples with multiple runs: **{paper}\_{SRA_Sample_ID}\_{Treatment_Group}_run{#}.fq**
 
-Carpenter FASTQ files should be located in the *carpenter/01_fastq* directory. Powell and Walker have multiple FASTQ files per sample, and should be located in the *powell/01_fastq/by_run* and *walker/01_fastq/by_run* directories, respectively.
+Carpenter FASTQ files should be located in the **carpenter/01_fastq** directory. Powell and Walker have multiple FASTQ files per sample, and should be located in the **powell/01_fastq/by_run** and **walker/01_fastq/by_run** directories, respectively.
 
-Note: One sample (SRS2926581_S1no) from the Walker experiment was produced in a pilot experiment and contains only one run. Its FASTQ file should be renamed *walker_SRS2926581_S1no_**cat**.fq* and placed in the *walker/01_fastq/concatenated* directory.
+Note: One sample (SRS2926581_S1no) from the Walker experiment was produced in a pilot experiment and contains only one run. Its FASTQ file should be renamed **walker_SRS2926581_S1no_*cat*.fq** and placed in the **walker/01_fastq/concatenated** directory.
 
 For each dataset, run scripts in the following order:
 1. **{paper}_01_fastq_02_trimmed_fastq.py** - Creates files in the 01_fastq and 02_trimmed_fastq directories
