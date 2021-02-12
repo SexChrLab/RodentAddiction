@@ -234,10 +234,11 @@ Uploaded/created files:
 - walker/**walker_directory_strucutre.txt**
 
 ### 02/12/2021
-Uploaded file:
+Uploaded files:
 - walker/**walker_file_sizes.txt**
+- powell/**powell_file_sizes.txt**
 
-Includes the original file sizes for all Walker files, so they can be double-checked if there are errors in the workflow.
+Includes the original file sizes for all Walker & Powell files, so they can be double-checked if there are errors in the workflow.
 
 ## To-Do List
 ### General
@@ -246,5 +247,5 @@ Includes the original file sizes for all Walker files, so they can be double-che
 - Finish filling out all_manifest.xlsx, and then split into experiment-specific .csv files
 - Change extension of .py files to be .snk or .snakefile
 - Create differential expression scripts
-- Make .txt files for Powell & Carpenter data with original file sizes
+- Make .txt files for Carpenter data with original file sizes
 - Change file and directory paths to account for running in /data/CEM/
