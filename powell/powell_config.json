@@ -218,7 +218,7 @@
         "Model": "NextSeq 500"
     },
 
-    "JN7-A14_CE21cue": {
+    "SRS6085265_CE21cue": {
         "Paper": "Powell et al. 2020",
         "Lab_Sample_ID": "JN7-A14",
         "SRA_Sample_ID": "SRS6085265",
@@ -235,7 +235,7 @@
         "Model": "NextSeq 500"
     },
 
-    "JN15-A1_CE21cue": {
+    "SRS6085271_CE21cue": {
         "Paper": "Powell et al. 2020",
         "Lab_Sample_ID": "JN15-A1",
         "SRA_Sample_ID": "SRS6085271",

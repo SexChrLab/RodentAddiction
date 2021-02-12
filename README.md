@@ -2,7 +2,7 @@
 
 Annika Vannan, email: avannan@asu.edu \
 https://github.com/SexChrLab/RodentAddiction \
-Last modified: 02/06/2021
+Last modified: 02/12/2021
 
 ## Project Description
 The purpose of this project is to identify genes relevant to drug-motivated behavior in rodent models of cocaine addiction. RNA-seq datasets were obtained from the papers listed below. Data from each paper/experiment are referred to by their first author (e.g. Carpenter data) throughout this README and other files in the directory.
@@ -39,7 +39,8 @@ The folder **all/** contains scripts and other files pertaining to the overall p
 │   ├── walker_03_alignment_04_processing.py
 │   ├── walker_05_counts.py
 │   ├── walker_config.json
-|   └── walker_directory_structure.txt
+|   ├── walker_directory_structure.txt
+|   └── walker_file_sizes.txt
 ├── .gitattributes
 ├── LICENSE
 └── README.md
@@ -232,6 +233,12 @@ Uploaded/created files:
 - powell/**powell_directory_structure.txt**
 - walker/**walker_directory_strucutre.txt**
 
+### 02/12/2021
+Uploaded file:
+- walker/**walker_file_sizes.txt**
+
+Includes the original file sizes for all Walker files, so they can be double-checked if there are errors in the workflow.
+
 ## To-Do List
 ### General
 - Change trimmomatic parameters
@@ -239,3 +246,5 @@ Uploaded/created files:
 - Finish filling out all_manifest.xlsx, and then split into experiment-specific .csv files
 - Change extension of .py files to be .snk or .snakefile
 - Create differential expression scripts
+- Make .txt files for Powell & Carpenter data with original file sizes
+- Change file and directory paths to account for running in /data/CEM/
