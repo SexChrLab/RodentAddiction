@@ -25,7 +25,8 @@ The folder **all/** contains scripts and other files pertaining to the overall p
 │   ├── carpenter_03_alignment_04_processing.py
 │   ├── carpenter_05_counts.py
 │   ├── carpenter_config.json
-|   └── carpenter_directory_structure.txt
+|   ├── carpenter_directory_structure.txt
+|   └── carpenter_file_sizes.txt
 ├── junk
 │   └── (various files)
 ├── powell
@@ -33,7 +34,8 @@ The folder **all/** contains scripts and other files pertaining to the overall p
 │   ├── powell_03_alignment_04_processing.py
 │   ├── powell_05_counts.py
 │   ├── powell_config.json
-|   └── powell_directory_structure.txt
+|   ├── powell_directory_structure.txt
+|   └── powell_file_sizes.txt
 ├── walker
 │   ├── walker_01_fastq_02_trimmed_fastq.py
 │   ├── walker_03_alignment_04_processing.py
