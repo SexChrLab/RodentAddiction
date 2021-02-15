@@ -9,6 +9,26 @@
 # All sample names (indicated by {sample}) include both the SRA Sample ID (SRS#) and the treatment group - e.g. SRS2926577_C1no.
 # Files were initially separated by run (8 runs per sample with the exception of SRS2926581_S1no); run # is listed for applicable files.
 
+## - Using This Script - ##
+# When run in combination with the other Walker Snakemake files and the corresponding JSON file in the same directory, 
+# this script creates most of the necessary sub-directories within your starting directory. See walker_directory_structure.txt for 
+# the complete directory structure that will result from running these scripts.
+#
+# To use this script, you need to create the following directory structure:
+#
+# <your starting directory>
+# └── walker
+# 	└── 01_fastq
+# 		└── by_run
+# 			└── <all fastq files except below>
+# 		└── by_run
+# 			└── walker_SRS2926581_S1no_cat.fastq
+#
+# After creating the above structure, change the following variables in this script:
+# 1) All tool paths
+# 2) adapter_fasta
+# 3) main_dir (your starting directory)
+
 # THINGS TO CHANGE
 # 1. Get appropriate adapter file
 # 2. Change trimmomatic parameters
@@ -22,24 +42,27 @@
 
 import os
 
-# Config file
-configfile: "walker_config.json"
-
-# Tool paths
+## - USERS SHOULD CHANGE THE FOLLOWING VARIABLES - ##
+# Tool Paths
 fastqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/opt/fastqc-0.11.9/fastqc" # Version 0.11.9
 multiqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/bin/multiqc" # Version 1.9
 trimmomatic_path = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic-0.39-1/trimmomatic.jar" # Version 0.39-1
+# References & Reference Directories
+adapter_fasta = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
+# Starting Directory
+start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction"
+## -- END -- ##
+
+# Config file
+configfile: "walker_config.json"
 
 # Directory Variables
-# References
-adapter_dir = config["adapter_dir"] # Adapter
 # FASTQs
-run_fastq_dir = config["run_fastq_dir"] # Initial FASTQs, separated by run
-run_fastqc_dir = config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs separated by run
-cat_fastq_dir = config["cat_fastq_dir"] # Initial FASTQs, concatenated by sample
+fastq_dir = start_dir + config["fastq_dir"] # Initial FASTQs
+fastqc_dir = start_dir + config["fastqc_dir"] # FastQC/MultiQC for initial FASTQs
 # Trimmed FASTQs
-trimmed_fastq_dir = config["trimmed_fastq_dir"] # Trimmed, concatenated FASTQs
-trimmed_fastqc_dir = config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
+trimmed_fastq_dir = start_dir + config["trimmed_fastq_dir"] # Trimmed FASTQs
+trimmed_fastqc_dir = start_dir + config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
 
 ######################
 ## All Output Files ##

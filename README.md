@@ -2,7 +2,7 @@
 
 Annika Vannan, email: avannan@asu.edu \
 https://github.com/SexChrLab/RodentAddiction \
-Last modified: 02/12/2021
+Last modified: 02/15/2021
 
 ## Project Description
 The purpose of this project is to identify genes relevant to drug-motivated behavior in rodent models of cocaine addiction. RNA-seq datasets were obtained from the papers listed below. Data from each paper/experiment are referred to by their first author (e.g. Carpenter data) throughout this README and other files in the directory.
@@ -191,6 +191,8 @@ The RNA-seq workflow will create directories for each dataset that follow the st
 - walker/01_fastq/by_run
 - walker/01_fastq/concatenated
 
+Before running the Snakemake scripts, place FASTQ files into the appropriate directory as follows:
+
 Raw FASTQ files should be named according to the following conventions: \
 Samples with 1 run: **{paper}\_{SRA_Sample_ID}\_{Treatment_Group}.fq** \
 Samples with multiple runs: **{paper}\_{SRA_Sample_ID}\_{Treatment_Group}_run{#}.fq**
@@ -240,6 +242,15 @@ Uploaded files:
 
 Includes the original file sizes for all Walker & Powell files, so they can be double-checked if there are errors in the workflow.
 
+### 02/15/2021
+Updated all Snakemake and JSON files:
+- Included more information on how to run the scripts, including how to set up the initial directory structure
+- File paths are now more customizable to the user and their starting directory
+- File paths in JSON files changed to reflect alterations to Snakemake scripts
+
+Uploaded files:
+- carpenter/**carpenter_file_sizes.txt**
+
 ## To-Do List
 ### General
 - Change trimmomatic parameters
@@ -247,5 +258,3 @@ Includes the original file sizes for all Walker & Powell files, so they can be d
 - Finish filling out all_manifest.xlsx, and then split into experiment-specific .csv files
 - Change extension of .py files to be .snk or .snakefile
 - Create differential expression scripts
-- Make .txt files for Carpenter data with original file sizes
-- Change file and directory paths to account for running in /data/CEM/

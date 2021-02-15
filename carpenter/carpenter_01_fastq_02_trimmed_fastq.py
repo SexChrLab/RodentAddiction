@@ -8,6 +8,23 @@
 # All sample names (indicated by {sample}) include both the Sequence Read Archive (SRA) Sample ID (SRS#) and the treatment group - e.g. SRS5770694_C1abs.
 # SRA Project ID: SRP234876; Bioproject ID: PRJNA593775; Gene Expression Omnibus Series ID: GSE141520
 
+## - Using This Script - ##
+# When run in combination with the other Carpenter Snakemake files and the corresponding JSON file in the same directory, 
+# this script creates most of the necessary sub-directories within your starting directory. See carpenter_directory_structure.txt for 
+# the complete directory structure that will result from running these scripts.
+#
+# To use this script, you need to create the following directory structure:
+#
+# <your starting directory>
+# └── carpenter
+# 	└── 01_fastq
+# 		└── <all fastq files>
+#
+# After creating the above structure, change the following variables in this script:
+# 1) All tool paths
+# 2) adapter_fasta
+# 3) main_dir (your starting directory)
+
 # THINGS TO CHANGE
 # 1. Get appropriate adapter file
 # 2. Change trimmomatic parameters
@@ -19,23 +36,27 @@
 
 import os
 
-# Config file
-configfile: "carpenter_config.json"
-
-# Tool paths
+## - USERS SHOULD CHANGE THE FOLLOWING VARIABLES - ##
+# Tool Paths
 fastqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/opt/fastqc-0.11.9/fastqc" # Version 0.11.9
 multiqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/bin/multiqc" # Version 1.9
 trimmomatic_path = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic-0.39-1/trimmomatic.jar" # Version 0.39-1
+# References & Reference Directories
+adapter_fasta = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
+# Starting Directory
+start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction"
+## -- END -- ##
+
+# Config file
+configfile: "carpenter_config.json"
 
 # Directory Variables
-# References
-adapter_dir = config["adapter_dir"] # Adapter
 # FASTQs
-fastq_dir = config["fastq_dir"] # Initial FASTQs
-fastqc_dir = config["fastqc_dir"] # FastQC/MultiQC for initial FASTQs
+fastq_dir = start_dir + config["fastq_dir"] # Initial FASTQs
+fastqc_dir = start_dir + config["fastqc_dir"] # FastQC/MultiQC for initial FASTQs
 # Trimmed FASTQs
-trimmed_fastq_dir = config["trimmed_fastq_dir"] # Trimmed FASTQs
-trimmed_fastqc_dir = config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
+trimmed_fastq_dir = start_dir + config["trimmed_fastq_dir"] # Trimmed FASTQs
+trimmed_fastqc_dir = start_dir + config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
 
 ######################
 ## All Output Files ##
@@ -121,7 +142,7 @@ rule trimmomatic:
 	input:
 		FQ1 = fastq_dir + "carpenter_{sample}_fq1.fastq",
 		FQ2 = fastq_dir + "carpenter_{sample}_fq2.fastq",
-		ADAPTER = adapter_dir + "TruSeq3-PE-2.fa"
+		ADAPTER = adapter_fasta
 	output:
 		TRIMMED_FQ1 = trimmed_fastq_dir + "carpenter_{sample}_trim_fq1.fastq",
 		TRIMMED_FQ2 = trimmed_fastq_dir + "carpenter_{sample}_trim_fq2.fastq",

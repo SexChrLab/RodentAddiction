@@ -10,6 +10,24 @@
 # Concatenated files can be downloaded from SRA (though FASTQ headers have been stripped).
 # SRA Project ID: SRP246331; Bioproject ID: PRJNA604189; Gene Expression Omnibus Series ID: GSE144606
 
+## - Using This Script - ##
+# When run in combination with the other Powell Snakemake files and the corresponding JSON file in the same directory, 
+# this script creates most of the necessary sub-directories within your starting directory. See powell_directory_structure.txt for 
+# the complete directory structure that will result from running these scripts.
+#
+# To use this script, you need to create the following directory structure:
+#
+# <your starting directory>
+# └── powell
+# 	└── 01_fastq
+# 		└── by_run
+# 			└── <all fastq files>
+#
+# After creating the above structure, change the following variables in this script:
+# 1) All tool paths
+# 2) adapter_fasta
+# 3) main_dir (your starting directory)
+
 # THINGS TO CHANGE
 # 1. Change trimmomatic parameters
 # 2. Change to final directory paths
@@ -20,25 +38,29 @@
 
 import os
 
-# Config file
-configfile: "powell_config.json"
-
-# Tool paths
+## - USERS SHOULD CHANGE THE FOLLOWING VARIABLES - ##
+# Tool Paths
 fastqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/opt/fastqc-0.11.9/fastqc" # Version 0.11.9
 multiqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/bin/multiqc" # Version 1.9
 trimmomatic_path = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic-0.39-1/trimmomatic.jar" # Version 0.39-1
+# References & Reference Directories
+adapter_fasta = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic/adapters/TruSeq3-SE.fa"
+# Starting Directory
+start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction"
+## -- END -- ##
+
+# Config file
+configfile: "powell_config.json"
 
 # Directory Variables
-# References
-adapter_dir = config["adapter_dir"] # Adapter
 # FASTQs
-run_fastq_dir = config["run_fastq_dir"] # Initial FASTQs, separated by run
-run_fastqc_dir = config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs separated by run
-cat_fastq_dir = config["run_fastq_dir"] # Initial FASTQs, concatenated by sample
-cat_fastqc_dir = config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs concatenated by sample
+run_fastq_dir = start_dir + config["run_fastq_dir"] # Initial FASTQs, separated by run
+run_fastqc_dir = star_dir + config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs separated by run
+cat_fastq_dir = start_dir + config["run_fastq_dir"] # Initial FASTQs, concatenated by sample
+cat_fastqc_dir = start_dir + config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs concatenated by sample
 # Trimmed FASTQs
-trimmed_fastq_dir = config["trimmed_fastq_dir"] # Trimmed, concatenated FASTQs
-trimmed_fastqc_dir = config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
+trimmed_fastq_dir = start_dir + config["trimmed_fastq_dir"] # Trimmed, concatenated FASTQs
+trimmed_fastqc_dir = start_dir + config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
 
 ######################
 ## All Output Files ##
@@ -167,7 +189,7 @@ rule cat_multiqc:
 rule trimmomatic:
 	input:
 		FQ = cat_fastq_dir + "powell_{sample}_cat.fastq",
-		ADAPTER = adapter_dir + "TruSeq3-SE.fa"
+		ADAPTER = adapter_fasta
 	output:
 		TRIMMED_FQ = trimmed_fastq_dir + "powell_{sample}_trim.fastq",
 		LOGFILE = trimmed_fastq_dir + "logfiles/powell_{sample}_trimmomatic.log"

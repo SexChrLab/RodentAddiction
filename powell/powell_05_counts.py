@@ -9,6 +9,14 @@
 # Concatenated files can be downloaded from SRA (though FASTQ headers have been stripped).
 # SRA Project ID: SRP246331; Bioproject ID: PRJNA604189; Gene Expression Omnibus Series ID: GSE144606
 
+## - Using This Script - ##
+# See powell_01_fastq_02_trimmed_fastq.py for information on initial directory setup before running this script.
+# Remember to change the following variables:
+# 1) All tool paths
+# 2) genome_fasta
+# 3) annotation_gtf
+# 3) main_dir (your starting directory)
+
 # THINGS TO CHANGE
 # 1. Change StringTie parameters
 # 2. Change to final directory paths
@@ -19,20 +27,25 @@
 
 import os
 
+## - USERS SHOULD CHANGE THE FOLLOWING VARIABLES - ##
+# Tool Paths
+stringtie_path = "/home/avannan/miniconda3/envs/rodent_addiction/bin/stringtie" # Version 2.1.4
+# References & Reference Directories
+genome_fasta = "/home/avannan/rodent_addiction/refs/rat/Rn6_genome.fa"
+annotation_gtf = "/home/avannan/rodent_addiction/refs/rat/Rn6_annotation.gtf"
+# Starting Directory
+start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction"
+## -- END -- ##
+
 # Config file
 configfile: "powell_config.json"
 
-# Tool paths
-stringtie_path = "/home/avannan/miniconda3/envs/rodent_addiction/bin/stringtie" # Version 2.1.4
-
 # Directory Variables
-# References
-ome_dir = config["ome_dir"] # Contains genome, transcriptome, & annotation files
 # Processing
-hisat2_sorted_bams_dir = config["hisat2_sorted_bams_dir"] # Sorted HISAT2 BAM files
-hisat2_sorted_bams_stats_dir = config["hisat2_sorted_bams_stats_dir"] # Stats for sorted HISAT2 BAMs
+hisat2_sorted_bams_dir = start_dir + config["hisat2_sorted_bams_dir"] # Sorted HISAT2 BAM files
+hisat2_sorted_bams_stats_dir = start_dir + config["hisat2_sorted_bams_stats_dir"] # Stats for sorted HISAT2 BAMs
 # Counting
-hisat2_stringtie_dir = config["hisat2_stringtie_dir"] # HISAT2/StringTie directory; all StringTie files go in sample-specific subfolders
+hisat2_stringtie_dir = start_dir + config["hisat2_stringtie_dir"] # HISAT2/StringTie directory; all StringTie files go in sample-specific subfolders
 
 ######################
 ## All Output Files ##
@@ -67,7 +80,7 @@ rule all:
 rule hisat2_stringtie_first_pass:
 	input:
 		BAM = hisat2_sorted_bams_dir + "powell_{sample}_hisat2_trim_sort.bam",
-		GUIDE_GTF = ome_dir + "Rn6_annotation.gtf"
+		GUIDE_GTF = annotation_gtf
 	output: hisat2_stringtie_assem_tran_dir + "firstpass/powell_{sample}_hisat2_stringtie_assembled_transcripts_firstpass.gtf"
 	params:
 		stringtie = stringtie_path,
@@ -89,7 +102,7 @@ rule hisat2_stringtie_merge_list:
 rule hisat2_stringtie_merge:
 	input: 
 		STRINGTIE_MERGE_LIST = hisat2_stringtie_dir + "powell_hisat2_stringtie_list.txt",
-		GUIDE_GTF = ome_dir + "Rn6_annotation.gtf"
+		GUIDE_GTF = annotation_gtf
 	output: 
 		MERGED_GTF = hisat2_stringtie_dir + "powell_hisat2_stringtie_merge.gtf"
 	params:
