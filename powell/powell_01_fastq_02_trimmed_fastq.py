@@ -55,9 +55,9 @@ configfile: "powell_config.json"
 # Directory Variables
 # FASTQs
 run_fastq_dir = start_dir + config["run_fastq_dir"] # Initial FASTQs, separated by run
-run_fastqc_dir = star_dir + config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs separated by run
-cat_fastq_dir = start_dir + config["run_fastq_dir"] # Initial FASTQs, concatenated by sample
-cat_fastqc_dir = start_dir + config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs concatenated by sample
+run_fastqc_dir = start_dir + config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs separated by run
+cat_fastq_dir = start_dir + config["cat_fastq_dir"] # Initial FASTQs, concatenated by sample
+cat_fastqc_dir = start_dir + config["cat_fastqc_dir"] # FastQC/MultiQC for initial FASTQs concatenated by sample
 # Trimmed FASTQs
 trimmed_fastq_dir = start_dir + config["trimmed_fastq_dir"] # Trimmed, concatenated FASTQs
 trimmed_fastqc_dir = start_dir + config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
@@ -130,8 +130,7 @@ rule run_fastqc:
 		run_fastqc_dir = run_fastqc_dir
 	shell:
 		"""
-		{params.fastqc} -o {params.run_fastqc_dir} {input.RUN1} {input.RUN2} \
-		{input.RUN3} {input.RUN4} {input.RUN5} {input.RUN6} {input.RUN7} {input.RUN8}
+		{params.fastqc} {input.RUN1} {input.RUN2} {input.RUN3} {input.RUN4} -o {params.run_fastqc_dir}
 		"""
 
 #################################
@@ -146,11 +145,9 @@ rule concatenate_fastq:
 		RUN4 = run_fastq_dir + "powell_{sample}_run4.fastq"
 	output:
 		CAT_FQ = cat_fastq_dir + "powell_{sample}_cat.fastq"
-	params:
-		run_fastq_dir = run_fastq_dir
 	shell:
 		"""
-		cat {params.run_fastqc_dir} {input.RUN1} {input.RUN2} {input.RUN3} {input.RUN4} > {output.CAT_FQ}
+		cat {input.RUN1} {input.RUN2} {input.RUN3} {input.RUN4} > {output.CAT_FQ}
 		"""
 
 rule cat_fastqc:
@@ -164,7 +161,7 @@ rule cat_fastqc:
 		cat_fastqc_dir = cat_fastqc_dir
 	shell:
 		"""
-		{params.fastqc} -o {params.cat_fastqc_dir} {input.CAT_FQ}
+		{params.fastqc} {input.CAT_FQ} -o {params.cat_fastqc_dir}
 		"""
 
 rule cat_multiqc:
@@ -232,7 +229,7 @@ rule trimmed_fastqc:
 
 rule trimmed_multiqc:
 	input:
-			expand(trimmed_fastqc_dir + "powell_{sample}_trim_fastqc.zip", sample = config["samples_ALL"])
+		expand(trimmed_fastqc_dir + "powell_{sample}_trim_fastqc.zip", sample = config["samples_ALL"])
 	output:
 		TRIMMED_MULTIQC_REPORT = trimmed_fastqc_dir + "powell_trim_multiqc_report.html"
 	message: "Running MultiQC for FastQC reports on -trimmed- FASTQ files."

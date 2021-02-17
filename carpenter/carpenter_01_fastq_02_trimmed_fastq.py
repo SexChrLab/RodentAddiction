@@ -111,7 +111,7 @@ rule initial_fastqc:
 		fastqc_dir = fastqc_dir
 	shell:
 		"""
-		{params.fastqc} -o {params.fastqc_dir} {input.FQ1} {input.FQ2}
+		{params.fastqc} {input.FQ1} {input.FQ2} -o {params.run_fastqc_dir}
 		"""
 
 rule initial_multiqc:
@@ -191,7 +191,7 @@ rule trimmed_fastqc:
 		trimmed_fastqc_dir = trimmed_fastqc_dir
 	shell:
 		"""
-		{params.fastqc} -o {params.trimmed_fastqc_dir} {input.TRIMMED_FQ1} {input.TRIMMED_FQ2}
+		{params.fastqc} {input.TRIMMED_FQ1} {input.TRIMMED_FQ2} -o {params.trimmed_fastqc_dir}
 		"""
 
 rule trimmed_multiqc:

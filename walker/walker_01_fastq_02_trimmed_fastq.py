@@ -58,8 +58,10 @@ configfile: "walker_config.json"
 
 # Directory Variables
 # FASTQs
-fastq_dir = start_dir + config["fastq_dir"] # Initial FASTQs
-fastqc_dir = start_dir + config["fastqc_dir"] # FastQC/MultiQC for initial FASTQs
+run_fastq_dir = start_dir + config["run_fastq_dir"] # Initial FASTQs, separated by run
+run_fastqc_dir = start_dir + config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs separated by run
+cat_fastq_dir = start_dir + config["cat_fastq_dir"] # Initial FASTQs, concatenated by sample
+cat_fastqc_dir = start_dir + config["cat_fastqc_dir"] # FastQC/MultiQC for initial FASTQs concatenated by sample
 # Trimmed FASTQs
 trimmed_fastq_dir = start_dir + config["trimmed_fastq_dir"] # Trimmed FASTQs
 trimmed_fastqc_dir = start_dir + config["trimmed_fastqc_dir"] # FASTQC/MultiQC for trimmed FASTQs
@@ -152,8 +154,8 @@ rule run_fastqc:
 		run_fastqc_dir = run_fastqc_dir
 	shell:
 		"""
-		{params.fastqc} -o {params.run_fastqc_dir} {input.RUN1} {input.RUN2} \
-		{input.RUN3} {input.RUN4} {input.RUN5} {input.RUN6} {input.RUN7} {input.RUN8}
+		{params.fastqc} {input.RUN1} {input.RUN2} {input.RUN3} {input.RUN4} \
+		{input.RUN5} {input.RUN6} {input.RUN7} {input.RUN8} -o {params.run_fastqc_dir}
 		"""
 
 #################################
@@ -172,11 +174,9 @@ rule concatenate_fastq:
 		RUN8 = run_fastq_dir + "walker_{sample}_run8.fastq"
 	output:
 		CAT_FQ = cat_fastq_dir + "walker_{sample}_cat.fastq"
-	params:
-		run_fastq_dir = run_fastq_dir
 	shell:
 		"""
-		cat {params.run_fastqc_dir} {input.RUN1} {input.RUN2} {input.RUN3} {input.RUN4} \
+		cat {input.RUN1} {input.RUN2} {input.RUN3} {input.RUN4} \
 		{input.RUN5} {input.RUN6} {input.RUN7} {input.RUN8} > {output.CAT_FQ}
 		"""
 
@@ -216,7 +216,7 @@ rule cat_multiqc:
 rule trimmomatic:
 	input:
 		FQ = cat_fastq_dir + "walker_{sample}_cat.fastq",
-		ADAPTER = adapter_dir + "TruSeq3-SE.fa"
+		ADAPTER = adapter_fasta
 	output:
 		TRIMMED_FQ = trimmed_fastq_dir + "walker_{sample}_trim.fastq",
 		LOGFILE = trimmed_fastq_dir + "logfiles/walker_{sample}_trimmomatic.log"
@@ -254,12 +254,12 @@ rule trimmed_fastqc:
 		trimmed_fastqc_dir = trimmed_fastqc_dir
 	shell:
 		"""
-		{params.fastqc} -o {params.trimmed_fastqc_dir} {input.TRIMMED_FQ}
+		{params.fastqc} {input.TRIMMED_FQ} -o {params.trimmed_fastqc_dir}
 		"""
 
 rule trimmed_multiqc:
 	input:
-			expand(trimmed_fastqc_dir + "walker_{sample}_trim_fastqc.zip", sample = config["samples_ALL"])
+		expand(trimmed_fastqc_dir + "walker_{sample}_trim_fastqc.zip", sample = config["samples_ALL"])
 	output:
 		TRIMMED_MULTIQC_REPORT = trimmed_fastqc_dir + "walker_trim_multiqc_report.html"
 	message: "Running MultiQC for FastQC reports on -trimmed- FASTQ files."
