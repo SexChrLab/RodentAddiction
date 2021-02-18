@@ -2,7 +2,7 @@
 
 Annika Vannan, email: avannan@asu.edu \
 https://github.com/SexChrLab/RodentAddiction \
-Last modified: 02/15/2021
+Last modified: 02/17/2021
 
 ## Project Description
 The purpose of this project is to identify genes relevant to drug-motivated behavior in rodent models of cocaine addiction. RNA-seq datasets were obtained from the papers listed below. Data from each paper/experiment are referred to by their first author (e.g. Carpenter data) throughout this README and other files in the directory.
