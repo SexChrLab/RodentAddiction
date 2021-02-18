@@ -162,14 +162,14 @@ rule run_fastqc:
 
 rule sample_multiqc:
 	input: 
-		run_fastqc_dir + "walker_{sample}_run1_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run2_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run3_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run4_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run5_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run6_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run7_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run8_fastqc.zip"
+		run_fastqc_dir + "{sample}/walker_{sample}_run1_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run2_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run3_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run4_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run5_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run6_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run7_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run8_fastqc.zip"
 	output:
 		MULTIQC_REPORT = run_fastqc_dir + "{sample}/walker_{sample}_multiqc.html"
 	message: "Running MultiQC for FastQC reports on initial FASTQ files."
