@@ -93,7 +93,7 @@ rule all:
 		expand(run_fastqc_dir + "{sample}/walker_{sample}_run7_fastqc.zip", sample = config["samples_8runs"]),
 		expand(run_fastqc_dir + "{sample}/walker_{sample}_run8_fastqc.zip", sample = config["samples_8runs"]),
 		# Sample-level MultiQC files
-		expand(run_fastqc_dir + "{sample}/walker_{sample}_multiqc.html", sample = config["samples_ALL"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_multiqc.html", sample = config["samples_8runs"]),
 
 		# Concatenated FASTQ files
 		expand(cat_fastq_dir + "walker_{sample}_cat.fastq", sample = config["samples_ALL"]),
