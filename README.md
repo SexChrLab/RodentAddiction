@@ -253,6 +253,9 @@ Updated all Snakemake and JSON files:
 Uploaded files:
 - carpenter/**carpenter_file_sizes.txt**
 
+### 02/17/2021
+Updated Powell and Walker Snakemake files to include sample-level MultiQC before concatenation. Reorganized Powell and Walker directory structures to account for these changes.
+
 ## To-Do List
 ### General
 - Change trimmomatic parameters

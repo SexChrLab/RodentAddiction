@@ -21,28 +21,29 @@ necessarily in alphabetical order.
     |   |   ├── walker_{sample}_run7.fastq
     |   |   ├── walker_{sample}_run8.fastq
     |   |   └── quality_control
-    |   |       ├── walker_{sample}_run1_fastqc.html
-    |   |       ├── walker_{sample}_run2_fastqc.html
-    |   |       ├── walker_{sample}_run3_fastqc.html
-    |   |       ├── walker_{sample}_run4_fastqc.html
-    |   |       ├── walker_{sample}_run5_fastqc.html
-    |   |       ├── walker_{sample}_run6_fastqc.html
-    |   |       ├── walker_{sample}_run7_fastqc.html
-    |   |       ├── walker_{sample}_run8_fastqc.html
-    |   |       ├── walker_{sample}_run1_fastqc.zip
-    |   |       ├── walker_{sample}_run2_fastqc.zip
-    |   |       ├── walker_{sample}_run3_fastqc.zip
-    |   |       ├── walker_{sample}_run4_fastqc.zip
-    |   |       ├── walker_{sample}_run5_fastqc.zip
-    |   |       ├── walker_{sample}_run6_fastqc.zip
-    |   |       ├── walker_{sample}_run7_fastqc.zip
-    |   |       ├── walker_{sample}_run8_fastqc.zip
-    |   |       └── walker_by_run_multiqc_data
-    |   |           ├── multiqc.log
-    |   |           ├── multiqc_data.json
-    |   |           ├── multiqc_fastqc.txt
-    |   |           ├── multiqc_general_stats.txt
-    |   |           └── multiqc_sources.txt
+    |   |       └── {sample}
+    |   |           ├── walker_{sample}_run1_fastqc.html
+    |   |           ├── walker_{sample}_run2_fastqc.html
+    |   |           ├── walker_{sample}_run3_fastqc.html
+    |   |           ├── walker_{sample}_run4_fastqc.html
+    |   |           ├── walker_{sample}_run5_fastqc.html
+    |   |           ├── walker_{sample}_run6_fastqc.html
+    |   |           ├── walker_{sample}_run7_fastqc.html
+    |   |           ├── walker_{sample}_run8_fastqc.html
+    |   |           ├── walker_{sample}_run1_fastqc.zip
+    |   |           ├── walker_{sample}_run2_fastqc.zip
+    |   |           ├── walker_{sample}_run3_fastqc.zip
+    |   |           ├── walker_{sample}_run4_fastqc.zip
+    |   |           ├── walker_{sample}_run5_fastqc.zip
+    |   |           ├── walker_{sample}_run6_fastqc.zip
+    |   |           ├── walker_{sample}_run7_fastqc.zip
+    |   |           ├── walker_{sample}_run8_fastqc.zip
+    |   |           └── walker_by_run_multiqc_data
+    |   |               ├── multiqc.log
+    |   |               ├── multiqc_data.json
+    |   |               ├── multiqc_fastqc.txt
+    |   |               ├── multiqc_general_stats.txt
+    |   |               └── multiqc_sources.txt
     |   └── concatenated
     |       ├── walker_{sample}_cat.fastq
     |       └── quality_control

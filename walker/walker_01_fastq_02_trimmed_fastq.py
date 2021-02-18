@@ -59,7 +59,7 @@ configfile: "walker_config.json"
 # Directory Variables
 # FASTQs
 run_fastq_dir = start_dir + config["run_fastq_dir"] # Initial FASTQs, separated by run
-run_fastqc_dir = start_dir + config["run_fastqc_dir"] # FastQC/MultiQC for initial FASTQs separated by run
+run_fastqc_dir = start_dir + config["run_fastqc_dir"] # FastQC for initial FASTQs separated by run + MultiQC by sample
 cat_fastq_dir = start_dir + config["cat_fastq_dir"] # Initial FASTQs, concatenated by sample
 cat_fastqc_dir = start_dir + config["cat_fastqc_dir"] # FastQC/MultiQC for initial FASTQs concatenated by sample
 # Trimmed FASTQs
@@ -75,23 +75,25 @@ rule all:
 		# FASTQs
 		# Initial quality control checks on individual FASTQ files (FastQC), separated by run
 		# HTML files
-		expand(run_fastqc_dir + "walker_{sample}_run1_fastqc.html", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run2_fastqc.html", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run3_fastqc.html", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run4_fastqc.html", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run5_fastqc.html", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run6_fastqc.html", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run7_fastqc.html", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run8_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run1_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run2_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run3_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run4_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run5_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run6_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run7_fastqc.html", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run8_fastqc.html", sample = config["samples_8runs"]),
 		# Zip files
-		expand(run_fastqc_dir + "walker_{sample}_run1_fastqc.zip", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run2_fastqc.zip", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run3_fastqc.zip", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run4_fastqc.zip", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run5_fastqc.zip", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run6_fastqc.zip", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run7_fastqc.zip", sample = config["samples_8runs"]),
-		expand(run_fastqc_dir + "walker_{sample}_run8_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run1_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run2_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run3_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run4_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run5_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run6_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run7_fastqc.zip", sample = config["samples_8runs"]),
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_run8_fastqc.zip", sample = config["samples_8runs"]),
+		# Sample-level MultiQC files
+		expand(run_fastqc_dir + "{sample}/walker_{sample}_multiqc.html", sample = config["samples_ALL"]),
 
 		# Concatenated FASTQ files
 		expand(cat_fastq_dir + "walker_{sample}_cat.fastq", sample = config["samples_ALL"]),
@@ -132,23 +134,23 @@ rule run_fastqc:
 		RUN8 = run_fastq_dir + "walker_{sample}_run8.fastq"
 	output:
 		# HTML files
-		run_fastqc_dir + "walker_{sample}_run1_fastqc.html",
-		run_fastqc_dir + "walker_{sample}_run2_fastqc.html",
-		run_fastqc_dir + "walker_{sample}_run3_fastqc.html",
-		run_fastqc_dir + "walker_{sample}_run4_fastqc.html",
-		run_fastqc_dir + "walker_{sample}_run5_fastqc.html",
-		run_fastqc_dir + "walker_{sample}_run6_fastqc.html",
-		run_fastqc_dir + "walker_{sample}_run7_fastqc.html",
-		run_fastqc_dir + "walker_{sample}_run8_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run1_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run2_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run3_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run4_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run5_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run6_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run7_fastqc.html",
+		run_fastqc_dir + "{sample}/walker_{sample}_run8_fastqc.html",
 		# Zip files
-		run_fastqc_dir + "walker_{sample}_run1_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run2_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run3_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run4_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run5_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run6_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run7_fastqc.zip",
-		run_fastqc_dir + "walker_{sample}_run8_fastqc.zip"
+		run_fastqc_dir + "{sample}/walker_{sample}_run1_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run2_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run3_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run4_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run5_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run6_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run7_fastqc.zip",
+		run_fastqc_dir + "{sample}/walker_{sample}_run8_fastqc.zip"
 	params:
 		fastqc = fastqc_path,
 		run_fastqc_dir = run_fastqc_dir
@@ -157,6 +159,29 @@ rule run_fastqc:
 		{params.fastqc} {input.RUN1} {input.RUN2} {input.RUN3} {input.RUN4} \
 		{input.RUN5} {input.RUN6} {input.RUN7} {input.RUN8} -o {params.run_fastqc_dir}
 		"""
+
+rule sample_multiqc:
+	input: 
+		run_fastqc_dir + "walker_{sample}_run1_fastqc.zip",
+		run_fastqc_dir + "walker_{sample}_run2_fastqc.zip",
+		run_fastqc_dir + "walker_{sample}_run3_fastqc.zip",
+		run_fastqc_dir + "walker_{sample}_run4_fastqc.zip",
+		run_fastqc_dir + "walker_{sample}_run5_fastqc.zip",
+		run_fastqc_dir + "walker_{sample}_run6_fastqc.zip",
+		run_fastqc_dir + "walker_{sample}_run7_fastqc.zip",
+		run_fastqc_dir + "walker_{sample}_run8_fastqc.zip"
+	output:
+		MULTIQC_REPORT = run_fastqc_dir + "{sample}/walker_{sample}_multiqc.html"
+	message: "Running MultiQC for FastQC reports on initial FASTQ files."
+	params:
+		multiqc = multiqc_path,
+		multiqc_dir = run_fastqc_dir + "{sample}"
+	shell:
+		"""
+		export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && \
+		{params.multiqc} -f {params.multiqc_dir} -n {output.MULTIQC_REPORT} --interactive --verbose
+		"""
+
 
 #################################
 ## Quality Control - By Sample ##
