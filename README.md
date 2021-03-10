@@ -2,7 +2,7 @@
 
 Annika Vannan, email: avannan@asu.edu \
 https://github.com/SexChrLab/RodentAddiction \
-Last modified: 02/17/2021
+Last modified: 03/10/2021
 
 ## Project Description
 The purpose of this project is to identify genes relevant to drug-motivated behavior in rodent models of cocaine addiction. RNA-seq datasets were obtained from the papers listed below. Data from each paper/experiment are referred to by their first author (e.g. Carpenter data) throughout this README and other files in the directory.
@@ -13,7 +13,7 @@ Powell, G.L., Vannan, A., Bastle, R.M. *et al.* Environmental enrichment during 
 
 Walker, D.M., Cates, H.M, Loh, Y.E. *et al.* Cocaine self-administration alters transcriptome-wide responses in the brain's reward circuitry. *Biol Psychiatry* **15**, 84(12):867-880. (2018) https://doi.org/10.1016/j.biopsych.2018.04.009
 
-## GitHub Directory Structure
+## GitHub Repository Structure
 The folder **all/** contains scripts and other files pertaining to the overall project. There are also separate folders for each the Carpenter, Powell, and Walker experiments that contain experiment-specific files and scripts. The folder **junk/** contains junk files and scripts that I'm not ready to part with yet.
 
 ```bash
@@ -21,28 +21,34 @@ The folder **all/** contains scripts and other files pertaining to the overall p
 │   ├── all_manifest.xlsx
 │   └── RNASeqWorkflow02062021.pdf
 ├── carpenter
-│   ├── carpenter_01_fastq_02_trimmed_fastq.py
-│   ├── carpenter_03_alignment_04_processing.py
-│   ├── carpenter_05_counts.py
-│   ├── carpenter_config.json
-|   ├── carpenter_directory_structure.txt
-|   └── carpenter_file_sizes.txt
+|   ├── misc
+|   |   ├── carpenter_directory_structure.txt
+|   |   └── carpenter_file_sizes.txt
+|   └── scripts
+│       ├── carpenter_01_fastq_02_trimmed_fastq.py
+│       ├── carpenter_03_alignment_04_processing.py
+│       ├── carpenter_05_counts.py
+│       └── carpenter_config.json
 ├── junk
 │   └── (various files)
 ├── powell
-│   ├── powell_01_fastq_02_trimmed_fastq.py
-│   ├── powell_03_alignment_04_processing.py
-│   ├── powell_05_counts.py
-│   ├── powell_config.json
-|   ├── powell_directory_structure.txt
-|   └── powell_file_sizes.txt
+|   ├── misc
+|   |   ├── powell_directory_structure.txt
+|   |   └── powell_file_sizes.txt
+|   └── scripts
+│       ├── powell_01_fastq_02_trimmed_fastq.py
+│       ├── powell_03_alignment_04_processing.py
+│       ├── powell_05_counts.py
+│       └── powell_config.json
 ├── walker
-│   ├── walker_01_fastq_02_trimmed_fastq.py
-│   ├── walker_03_alignment_04_processing.py
-│   ├── walker_05_counts.py
-│   ├── walker_config.json
-|   ├── walker_directory_structure.txt
-|   └── walker_file_sizes.txt
+|   ├── misc
+|   |   ├── walker_directory_structure.txt
+|   |   └── walker_file_sizes.txt
+|   └── scripts
+│       ├── walker_01_fastq_02_trimmed_fastq.py
+│       ├── walker_03_alignment_04_processing.py
+│       ├── walker_05_counts.py
+│       └── walker_config.json
 ├── .gitattributes
 ├── LICENSE
 └── README.md
@@ -146,7 +152,7 @@ conda install python==3.6.12
 conda install snakemake==5.31.1
 conda install fastqc==0.11.9
 conda install multiqc==1.9
-conda install trimmomatic==0.39-1
+conda install bbmap==38.90
 conda install hisat2==2.2.1
 conda install samtools==1.7
 conda install bamtools==2.5.1
@@ -256,10 +262,25 @@ Uploaded files:
 ### 02/17/2021
 Updated Powell and Walker Snakemake files to include sample-level MultiQC before concatenation. Reorganized Powell and Walker directory structures to account for these changes.
 
+### 02/24/2021
+Changed MultiQC rules on Carpenter snakefile to create separate MultiQC reports for 1d and 28d abstinence groups, since they were sequenced separately and have different read lengths. Changed all directories named "quality_control" to "qc_reports". Changed GitHub repository structure.
+
+### 02/25/2021
+Changed Trimmomatic parameters to be consistent across experiments - a) remove adapters if present, b) SLIDINGWINDOW:4:30, c) MINLEN = half of read length.
+
+Re-uploaded file:
+- carpenter/**carpenter_file_sizes.txt**
+
+### 03/05/2021
+Switched to using BBDuk instead of Trimmomatic. Some parts of the README file are updated accordingly (needs more info later); scripts updated; directory structure files updated.
+
+## 03/08/2021
+Updated Walker config file.
+
 ## To-Do List
 ### General
-- Change trimmomatic parameters
-- Change StringTie parameters
 - Finish filling out all_manifest.xlsx, and then split into experiment-specific .csv files
 - Change extension of .py files to be .snk or .snakefile
 - Create differential expression scripts
+- Check bbduk parameters & add description of bbduk parameters to README file
+- Change StringTie parameters

@@ -35,14 +35,15 @@
 #####################
 
 import os
+import regex
 
 ## - USERS SHOULD CHANGE THE FOLLOWING VARIABLES - ##
 # Tool Paths
 fastqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/opt/fastqc-0.11.9/fastqc" # Version 0.11.9
 multiqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/bin/multiqc" # Version 1.9
-trimmomatic_path = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic-0.39-1/trimmomatic.jar" # Version 0.39-1
+bbduksh_path = "/home/avannan/miniconda3/envs/rodent_addiction/opt/bbmap-38.90-0/bbduk.sh" # Version 38.90
 # References & Reference Directories
-adapter_fasta = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic/adapters/TruSeq3-PE-2.fa"
+adapter_fasta = "/home/avannan/miniconda3/envs/rodent_addiction/opt/bbmap-38.90-0/resources/adapters.fa"
 # Starting Directory
 start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction"
 ## -- END -- ##
@@ -51,6 +52,8 @@ start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction"
 configfile: "carpenter_config.json"
 
 # Directory Variables
+# Misc
+misc_dir = start_dir + config["misc_dir"] # Contains lists for MulitQC by sequencing cohort/abstinence group
 # FASTQs
 fastq_dir = start_dir + config["fastq_dir"] # Initial FASTQs
 fastqc_dir = start_dir + config["fastqc_dir"] # FastQC/MultiQC for initial FASTQs
@@ -72,29 +75,37 @@ rule all:
 		# Zip files
 		expand(fastqc_dir + "carpenter_{sample}_fq1_fastqc.zip", sample = config["samples_ALL"]),
 		expand(fastqc_dir + "carpenter_{sample}_fq2_fastqc.zip", sample = config["samples_ALL"]),
+		# Lists of 1abs and 28abs FastQC Zip files
+		(misc_dir + "carpenter_1abs_multiqc_list.txt"),
+		(misc_dir + "carpenter_1abs_multiqc_list.txt"),
 		# Initial quality control check on set of FASTQ files (MultiQC)
-		(fastqc_dir + "carpenter_multiqc.html"),
+		(fastqc_dir + "carpenter_1abs_multiqc.html"),
+		(fastqc_dir + "carpenter_28abs_multiqc.html"),
 
 		# TRIMMED FASTQs
 		# Trimmed FASTQ files after quality control
 		expand(trimmed_fastq_dir + "carpenter_{sample}_trim_fq1.fastq", sample = config["samples_ALL"]),
 		expand(trimmed_fastq_dir + "carpenter_{sample}_trim_fq2.fastq", sample = config["samples_ALL"]),
-		# Log files for trimming
-		expand(trimmed_fastq_dir + "logfiles/carpenter_{sample}_trimmomatic.log", sample = config["samples_ALL"]),
+		# Stats files from trimming
+		expand(trimmed_fastq_dir + "stats/carpenter_{sample}_bbduk_stats.txt", sample = config["samples_ALL"]),
 		# Quality control checks on trimmed FASTQ files
 		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq1_fastqc.html", sample = config["samples_ALL"]),
 		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq2_fastqc.html", sample = config["samples_ALL"]),
 		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq1_fastqc.zip", sample = config["samples_ALL"]),
 		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq2_fastqc.zip", sample = config["samples_ALL"]),
+		# Lists of 1abs and 28abs FastQC Zip files
+		(misc_dir + "carpenter_1abs_trim_multiqc_list.txt"),
+		(misc_dir + "carpenter_1abs_trim_multiqc_list.txt"),
 		# Quality control check on set of trimmed FASTQ files
-		(trimmed_fastqc_dir + "carpenter_trim_multiqc.html")
+		(trimmed_fastqc_dir + "carpenter_1abs_trim_multiqc.html"),
+		(trimmed_fastqc_dir + "carpenter_28abs_trim_multiqc.html")
 
 ##############
 ## 01_fastq ##
 ##############
 
 #####################
-## Quality Control ##
+## Quality Reports ##
 #####################
 
 rule initial_fastqc:
@@ -114,20 +125,41 @@ rule initial_fastqc:
 		{params.fastqc} {input.FQ1} {input.FQ2} -o {params.fastqc_dir}
 		"""
 
-rule initial_multiqc:
-	input: 
+rule initial_multiqc_setup:
+	input:
 		expand(fastqc_dir + "carpenter_{sample}_fq1_fastqc.zip", sample = config["samples_ALL"]),
 		expand(fastqc_dir + "carpenter_{sample}_fq2_fastqc.zip", sample = config["samples_ALL"])
 	output:
-		MULTIQC_REPORT = fastqc_dir + "carpenter_multiqc.html"
-	message: "Running MultiQC for FastQC reports on initial FASTQ files."
+		LIST_1ABS = misc_dir + "carpenter_1abs_multiqc_list.txt",
+		LIST_28ABS = misc_dir + "carpenter_28abs_multiqc_list.txt"
+	priority: 1 # Needs to run before initial_multiqc_execute
+	run:
+		shell("echo -n > {output.LIST_1ABS}")
+		shell("echo -n > {output.LIST_28ABS}")
+		for i in input:
+			if regex.search("1abs", i):
+				shell("echo {} >> {{output.LIST_1ABS}}".format(i))
+			elif regex.search("28abs", i):
+				shell("echo {} >> {{output.LIST_28ABS}}".format(i))
+
+rule initial_multiqc_execute:
+	input:
+		expand(fastqc_dir + "carpenter_{sample}_fq1_fastqc.zip", sample = config["samples_ALL"]),
+		expand(fastqc_dir + "carpenter_{sample}_fq2_fastqc.zip", sample = config["samples_ALL"]),
+		LIST_1ABS = misc_dir + "carpenter_1abs_multiqc_list.txt",
+		LIST_28ABS = misc_dir + "carpenter_28abs_multiqc_list.txt"
+	output:
+		MULTIQC_1ABS_REPORT = fastqc_dir + "carpenter_1abs_multiqc.html",
+		MULTIQC_28ABS_REPORT = fastqc_dir + "carpenter_28abs_multiqc.html"
+	message: "Running MultiQC for FastQC reports on initial FASTQ files, separating by abstinence length."
 	params:
-		multiqc = multiqc_path,
-		fastqc_dir = fastqc_dir
+		multiqc = multiqc_path
 	shell:
 		"""
-		export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && \
-		{params.multiqc} -f {params.fastqc_dir} -n {output.MULTIQC_REPORT} --interactive --verbose
+		export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && {params.multiqc} -f \
+		--file-list {input.LIST_1ABS} -n {output.MULTIQC_1ABS_REPORT} --interactive --verbose
+		export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && {params.multiqc} -f \
+		--file-list {input.LIST_28ABS} -n {output.MULTIQC_28ABS_REPORT} --interactive --verbose
 		"""
 
 ######################
@@ -138,7 +170,7 @@ rule initial_multiqc:
 ## Trimming ##
 ##############
 
-rule trimmomatic:
+rule trim_bbduk:
 	input:
 		FQ1 = fastq_dir + "carpenter_{sample}_fq1.fastq",
 		FQ2 = fastq_dir + "carpenter_{sample}_fq2.fastq",
@@ -146,35 +178,21 @@ rule trimmomatic:
 	output:
 		TRIMMED_FQ1 = trimmed_fastq_dir + "carpenter_{sample}_trim_fq1.fastq",
 		TRIMMED_FQ2 = trimmed_fastq_dir + "carpenter_{sample}_trim_fq2.fastq",
-		TRIMMED_UNPAIRED_FQ1 = trimmed_fastq_dir + "carpenter_{sample}_trim_unpair_fq1.fastq",
-		TRIMMED_UNPAIRED_FQ2 = trimmed_fastq_dir + "carpenter_{sample}_trim_unpair_fq2.fastq",
-		LOGFILE = trimmed_fastq_dir + "logfiles/carpenter_{sample}_trimmomatic.log"
+		STATS = trimmed_fastq_dir + "stats/carpenter_{sample}_bbduk_stats.txt"
 	params:
-		# CHANGE TRIMMOMATIC PARAMETERS. CHECK PHRED.
-		trimmomatic_jar = trimmomatic_path,
-		threads = 4,
-		seed_mismatches = 2,
-		palindrome_clip_threshold = 30,
-		simple_clip_threshold = 10,
-		leading = 3, # May not need
-		trailing = 3, # May not need
-		winsize = 4,
-		winqual = 30,
-		minlen = 63 # Half of read length (125 bp)
+		bbduksh = bbduksh_path,
+		trimq = 15,
+		minlen = lambda wildcards: config[wildcards.sample]["Trim_Min_Length"], # Half of read length
+		maq = 20
 	shell:
 		"""
-		java -jar {params.trimmomatic_jar} PE -phred33 -threads {params.threads} -trimlog {output.LOGFILE} \
-		{input.FQ1} {input.FQ2} \
-		{output.TRIMMED_FQ1} {output.TRIMMED_UNPAIRED_FQ1} \
-		{output.TRIMMED_FQ2} {output.TRIMMED_UNPAIRED_FQ2} \
-		ILLUMINACLIP:{input.ADAPTER}:{params.seed_mismatches}:{params.palindrome_clip_threshold}:{params.simple_clip_threshold} \
-		LEADING:{params.leading} TRAILING:{params.trailing} \
-		SLIDINGWINDOW:{params.winsize}:{params.winqual} \
-		MINLEN:{params.minlen}
+		{params.bbduksh} -Xmx3g in1={input.FQ1} in2={input.FQ2} out1={output.TRIMMED_FQ1} out2={output.TRIMMED_FQ2} \
+		ftm=5 ref={input.ADAPTER} ktrim=r k=21 mink=11 hdist=2 stats={output.STATS} tbo tpe \
+		qtrim=rl trimq={params.trimq} minlen={params.minlen} maq={params.maq}
 		"""
 
 #####################
-## Quality Control ##
+## Quality Reports ##
 #####################
 
 rule trimmed_fastqc:
@@ -194,18 +212,38 @@ rule trimmed_fastqc:
 		{params.fastqc} {input.TRIMMED_FQ1} {input.TRIMMED_FQ2} -o {params.trimmed_fastqc_dir}
 		"""
 
-rule trimmed_multiqc:
+rule trimmed_multiqc_setup:
 	input:
 		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq1_fastqc.zip", sample = config["samples_ALL"]),
 		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq2_fastqc.zip", sample = config["samples_ALL"])
 	output:
-		TRIMMED_MULTIQC_REPORT = trimmed_fastqc_dir + "carpenter_trim_multiqc.html"
-	message: "Running MultiQC for FastQC reports on -trimmed- FASTQ files."
+		LIST_TRIM_1ABS = misc_dir + "carpenter_1abs_trim_multiqc_list.txt",
+		LIST_TRIM_28ABS = misc_dir + "carpenter_28abs_trim_multiqc_list.txt"
+	run:
+		shell("echo -n > {output.LIST_TRIM_1ABS}")
+		shell("echo -n > {output.LIST_TRIM_28ABS}")
+		for i in input:
+			if regex.search("1abs", i):
+				shell("echo {} >> {{output.LIST_TRIM_1ABS}}".format(i))
+			elif regex.search("28abs", i):
+				shell("echo {} >> {{output.LIST_TRIM_28ABS}}".format(i))
+
+rule trimmed_multiqc_execute:
+	input:
+		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq1_fastqc.zip", sample = config["samples_ALL"]),
+		expand(trimmed_fastqc_dir + "carpenter_{sample}_trim_fq2_fastqc.zip", sample = config["samples_ALL"]),
+		LIST_1ABS_TRIM = misc_dir + "carpenter_1abs_trim_multiqc_list.txt",
+		LIST_28ABS_TRIM = misc_dir + "carpenter_28abs_trim_multiqc_list.txt"
+	output:
+		MULTIQC_1ABS_TRIM_REPORT = trimmed_fastqc_dir + "carpenter_1abs_trim_multiqc.html",
+		MULTIQC_28ABS_TRIM_REPORT = trimmed_fastqc_dir + "carpenter_28abs_trim_multiqc.html"
+	message: "Running MultiQC for FastQC reports on -trimmed- FASTQ files, separating by abstinence length."
 	params:
-		multiqc = multiqc_path,
-		trimmed_multiqc_dir = trimmed_fastqc_dir
+		multiqc = multiqc_path
 	shell:
 		"""
-		export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && \
-		{params.multiqc} -f {params.trimmed_multiqc_dir} -n {output.TRIMMED_MULTIQC_REPORT} --interactive --verbose
+		export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && {params.multiqc} -f \
+		--file-list {input.LIST_1ABS_TRIM} -n {output.MULTIQC_1ABS_TRIM_REPORT} --interactive --verbose
+		export LC_ALL=en_US.UTF-8 && export LANG=en_US.UTF-8 && {params.multiqc} -f \
+		--file-list {input.LIST_28ABS_TRIM} -n {output.MULTIQC_28ABS_TRIM_REPORT} --interactive --verbose
 		"""

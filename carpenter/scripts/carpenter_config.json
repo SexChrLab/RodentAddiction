@@ -1,11 +1,13 @@
 {
     "COMMENT_DIRECTORIES_MAIN": "The directories for each step are listed here. Information about what files these directories contain can be found in the corresponding Snakefile.",
+    "COMMENT_MISC_DIRECTORY": "Directory for miscellaneous files.",
+        "misc_dir": "/carpenter/00_misc/",
     "COMMENT_FASTQ_DIRECTORIES": "Directories containing FASTQ & FastQC/MultiQC files.",
         "fastq_dir": "/carpenter/01_fastq/",
-        "fastqc_dir": "/carpenter/01_fastq/quality_control/",
+        "fastqc_dir": "/carpenter/01_fastq/qc_reports/",
     "COMMENT_TRIMMED_FASTQ_DIRECTORIES": "Directories containing FASTQ & FastQC/MultiQC files.",
         "trimmed_fastq_dir": "/carpenter/02_trimmed_fastq/",
-        "trimmed_fastqc_dir": "/carpenter/02_trimmed_fastq/quality_control/",
+        "trimmed_fastqc_dir": "/carpenter/02_trimmed_fastq/qc_reports/",
     "COMMENT_HISAT2_ALIGNMENT_DIRECTORIES": "Directories containing SAM and BAM files from HISAT2 alignment.",
         "hisat2_sams_dir": "/carpenter/03_alignment/HISAT2/sams/",
         "hisat2_bams_dir": "/carpenter/03_alignment/HISAT2/bams/",
@@ -62,7 +64,9 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770695_C1abs": {
@@ -79,7 +83,9 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770696_C1abs": {
@@ -96,7 +102,9 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770697_C1abs": {
@@ -113,7 +121,9 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770698_C1abs": {
@@ -130,7 +140,9 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770699_C1abs": {
@@ -147,109 +159,9 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
-    },
-
-    "SRS5770730_C28abs": {
-        "Paper": "Carpenter et al. 2020",
-        "Lab_Sample_ID": "COCAINE NAC 7",
-        "SRA_Sample_ID": "SRS5770730",
-        "SRA_Run_ID": "SRR10596878",
-        "GEO_Sample_ID": "GSM4205509",
-        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:1641:1209 1:N:0:AGCGATAG+TCAGAGCC",
-        "Species": "Mus musculus",
-        "Sex": "Male",
-        "Tissue": "Nucleus Accumbens (whole)",
-        "Treatment_Group": "C28abs",
-        "Drug": "Cocaine",
-        "Abstinence_Length": "28d",
-        "Platform": "Illumina",
-        "Model": "HiSeq 4000"
-    },
-
-    "SRS5770731_C28abs": {
-        "Paper": "Carpenter et al. 2020",
-        "Lab_Sample_ID": "COCAINE NAC 8",
-        "SRA_Sample_ID": "SRS5770731",
-        "SRA_Run_ID": "SRR10596879",
-        "GEO_Sample_ID": "GSM4205510",
-        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:1560:1209 1:N:0:AGCGATAG+GCCTCTAT",
-        "Species": "Mus musculus",
-        "Sex": "Male",
-        "Tissue": "Nucleus Accumbens (whole)",
-        "Treatment_Group": "C28abs",
-        "Drug": "Cocaine",
-        "Abstinence_Length": "28d",
-        "Platform": "Illumina",
-        "Model": "HiSeq 4000"
-    },
-
-    "SRS5770732_C28abs": {
-        "Paper": "Carpenter et al. 2020",
-        "Lab_Sample_ID": "COCAINE NAC 9",
-        "SRA_Sample_ID": "SRS5770732",
-        "SRA_Run_ID": "SRR10596880",
-        "GEO_Sample_ID": "GSM4205511",
-        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:31629:1191 1:N:0:GAATTCGT+GCCTCTAT",
-        "Species": "Mus musculus",
-        "Sex": "Male",
-        "Tissue": "Nucleus Accumbens (whole)",
-        "Treatment_Group": "C28abs",
-        "Drug": "Cocaine",
-        "Abstinence_Length": "28d",
-        "Platform": "Illumina",
-        "Model": "HiSeq 4000"
-    },
-
-    "SRS5770733_C28abs": {
-        "Paper": "Carpenter et al. 2020",
-        "Lab_Sample_ID": "COCAINE NAC 10",
-        "SRA_Sample_ID": "SRS5770733",
-        "SRA_Run_ID": "SRR10596881",
-        "GEO_Sample_ID": "GSM4205512",
-        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:2798:1209 1:N:0:CGGCTATG+GCCTCTAT",
-        "Species": "Mus musculus",
-        "Sex": "Male",
-        "Tissue": "Nucleus Accumbens (whole)",
-        "Treatment_Group": "C28abs",
-        "Drug": "Cocaine",
-        "Abstinence_Length": "28d",
-        "Platform": "Illumina",
-        "Model": "HiSeq 4000"
-    },
-
-    "SRS5770734_C28abs": {
-        "Paper": "Carpenter et al. 2020",
-        "Lab_Sample_ID": "COCAINE NAC 11",
-        "SRA_Sample_ID": "SRS5770734",
-        "SRA_Run_ID": "SRR10596882",
-        "GEO_Sample_ID": "GSM4205513",
-        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:31223:1191 1:N:0:CGGCTATG+TCAGAGCC",
-        "Species": "Mus musculus",
-        "Sex": "Male",
-        "Tissue": "Nucleus Accumbens (whole)",
-        "Treatment_Group": "C28abs",
-        "Drug": "Cocaine",
-        "Abstinence_Length": "28d",
-        "Platform": "Illumina",
-        "Model": "HiSeq 4000"
-    },
-
-    "SRS5770735_C28abs": {
-        "Paper": "Carpenter et al. 2020",
-        "Lab_Sample_ID": "COCAINE NAC 12",
-        "SRA_Sample_ID": "SRS5770735",
-        "SRA_Run_ID": "SRR10596883",
-        "GEO_Sample_ID": "GSM4205514",
-        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:1661:1209 1:N:0:CGCTCATT+CTTCGCCT",
-        "Species": "Mus musculus",
-        "Sex": "Male",
-        "Tissue": "Nucleus Accumbens (whole)",
-        "Treatment_Group": "C28abs",
-        "Drug": "Cocaine",
-        "Abstinence_Length": "28d",
-        "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770700_S1abs": {
@@ -266,7 +178,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770701_S1abs": {
@@ -283,7 +197,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770702_S1abs": {
@@ -300,7 +216,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770703_S1abs": {
@@ -317,7 +235,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770704_S1abs": {
@@ -334,7 +254,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
     },
 
     "SRS5770705_S1abs": {
@@ -351,7 +273,123 @@
         "Drug": "Saline",
         "Abstinence_Length": "1d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "125",
+        "Trim_Min_Length": "63"
+    },
+
+    "SRS5770730_C28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "COCAINE NAC 7",
+        "SRA_Sample_ID": "SRS5770730",
+        "SRA_Run_ID": "SRR10596878",
+        "GEO_Sample_ID": "GSM4205509",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:1641:1209 1:N:0:AGCGATAG+TCAGAGCC",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "C28abs",
+        "Drug": "Cocaine",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770731_C28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "COCAINE NAC 8",
+        "SRA_Sample_ID": "SRS5770731",
+        "SRA_Run_ID": "SRR10596879",
+        "GEO_Sample_ID": "GSM4205510",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:1560:1209 1:N:0:AGCGATAG+GCCTCTAT",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "C28abs",
+        "Drug": "Cocaine",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770732_C28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "COCAINE NAC 9",
+        "SRA_Sample_ID": "SRS5770732",
+        "SRA_Run_ID": "SRR10596880",
+        "GEO_Sample_ID": "GSM4205511",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:31629:1191 1:N:0:GAATTCGT+GCCTCTAT",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "C28abs",
+        "Drug": "Cocaine",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770733_C28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "COCAINE NAC 10",
+        "SRA_Sample_ID": "SRS5770733",
+        "SRA_Run_ID": "SRR10596881",
+        "GEO_Sample_ID": "GSM4205512",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:2798:1209 1:N:0:CGGCTATG+GCCTCTAT",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "C28abs",
+        "Drug": "Cocaine",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770734_C28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "COCAINE NAC 11",
+        "SRA_Sample_ID": "SRS5770734",
+        "SRA_Run_ID": "SRR10596882",
+        "GEO_Sample_ID": "GSM4205513",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:31223:1191 1:N:0:CGGCTATG+TCAGAGCC",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "C28abs",
+        "Drug": "Cocaine",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770735_C28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "COCAINE NAC 12",
+        "SRA_Sample_ID": "SRS5770735",
+        "SRA_Run_ID": "SRR10596883",
+        "GEO_Sample_ID": "GSM4205514",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:1661:1209 1:N:0:CGCTCATT+CTTCGCCT",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "C28abs",
+        "Drug": "Cocaine",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
     },
 
     "SRS5770736_S28abs": {
@@ -368,7 +406,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "28d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
     },
 
     "SRS5770737_S28abs": {
@@ -385,7 +425,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "28d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
     },
 
     "SRS5770739_S28abs": {
@@ -402,7 +444,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "28d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
     },
 
     "SRS5770738_S28abs": {
@@ -419,8 +463,11 @@
         "Drug": "Saline",
         "Abstinence_Length": "28d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
     },
+
 
     "SRS5770740_S28abs": {
         "Paper": "Carpenter et al. 2020",
@@ -436,7 +483,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "28d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
     },
 
     "SRS5770741_S28abs": {
@@ -453,7 +502,9 @@
         "Drug": "Saline",
         "Abstinence_Length": "28d",
         "Platform": "Illumina",
-        "Model": "HiSeq 4000"
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
     }
 
   }

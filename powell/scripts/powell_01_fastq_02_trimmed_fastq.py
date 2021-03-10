@@ -42,9 +42,9 @@ import os
 # Tool Paths
 fastqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/opt/fastqc-0.11.9/fastqc" # Version 0.11.9
 multiqc_path = "/home/avannan/miniconda3/envs/rodent_addiction/bin/multiqc" # Version 1.9
-trimmomatic_path = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic-0.39-1/trimmomatic.jar" # Version 0.39-1
+bbduksh_path = "/home/avannan/miniconda3/envs/rodent_addiction/opt/bbmap-38.90-0/bbduk.sh" # Version 38.90
 # References & Reference Directories
-adapter_fasta = "/home/avannan/miniconda3/envs/rodent_addiction/share/trimmomatic/adapters/TruSeq3-SE.fa"
+adapter_fasta = "/home/avannan/miniconda3/envs/rodent_addiction/opt/bbmap-38.90-0/resources/adapters.fa"
 # Starting Directory
 start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction"
 ## -- END -- ##
@@ -94,20 +94,20 @@ rule all:
 		# TRIMMED FASTQs
 		# Trimmed FASTQ files after quality control and concatenation
 		expand(trimmed_fastq_dir + "powell_{sample}_trim.fastq", sample = config["samples_ALL"]),
-		# Log files for trimming
-		expand(trimmed_fastq_dir + "logfiles/powell_{sample}_trimmomatic.log", sample = config["samples_ALL"]),
+		# Stats files from trimming
+		expand(trimmed_fastq_dir + "stats/powell_{sample}_bbduk_stats.txt", sample = config["samples_ALL"]),
 		# Quality control checks on individual FASTQ files (trimmed)
 		expand(trimmed_fastqc_dir + "powell_{sample}_trim_fastqc.html", sample = config["samples_ALL"]),
 		expand(trimmed_fastqc_dir + "powell_{sample}_trim_fastqc.zip", sample = config["samples_ALL"]),
 		# Quality control check on set of FASTQ files (MultiQC), trimmed
-		(trimmed_fastqc_dir + "powell_trim_multiqc_report.html")
+		(trimmed_fastqc_dir + "powell_trim_multiqc.html")
 
 ##############
 ## 01_fastq ##
 ##############
 
 ##############################
-## Quality Control - By Run ##
+## Quality Reports - By Run ##
 ##############################
 
 rule run_fastqc:
@@ -154,7 +154,7 @@ rule sample_multiqc:
 		"""
 
 #################################
-## Quality Control - By Sample ##
+## Quality Reports - By Sample ##
 #################################
 
 rule concatenate_fastq:
@@ -203,34 +203,32 @@ rule cat_multiqc:
 ## 02_trimmed_fastq ##
 ######################
 
-rule trimmomatic:
+##############
+## Trimming ##
+##############
+
+rule trim_bbduk:
 	input:
 		FQ = cat_fastq_dir + "powell_{sample}_cat.fastq",
 		ADAPTER = adapter_fasta
 	output:
 		TRIMMED_FQ = trimmed_fastq_dir + "powell_{sample}_trim.fastq",
-		LOGFILE = trimmed_fastq_dir + "logfiles/powell_{sample}_trimmomatic.log"
+		STATS = trimmed_fastq_dir + "stats/powell_{sample}_bbduk_stats.txt"
 	params:
-		trimmomatic_jar = trimmomatic_path,
-		threads = 4,
-		# LEADING & TRAILING
-		leading = 3, # May not need
-		trailing = 3, # May not need
-		# SLIDINGWINDOW
-		winsize = 4,
-		winqual = 30,
-		minlen = 50 # Half of read length
+		bbduksh = bbduksh_path,
+		trimq = 15,
+		minlen = 50, # Half of read length
+		maq = 20
 	shell:
 		"""
-		java -jar {params.trimmomatic_jar} SE -phred33 -threads {params.threads} -trimlog {output.LOGFILE} \
-		{input.FQ} {output.TRIMMED_FQ} \
-		LEADING:{params.leading} TRAILING:{params.trailing} \
-		SLIDINGWINDOW:{params.winsize}:{params.winqual} \
-		MINLEN:{params.minlen}
+		{params.bbduksh} -Xmx3g in1={input.FQ} out={output.TRIMMED_FQ} \
+		ref={input.ADAPTER} ktrim=r k=21 mink=11 hdist=2 stats={output.STATS} \
+		trimpolya=10 trimpolyg=10 \
+		qtrim=rl trimq={params.trimq} minlen={params.minlen} maq={params.maq}
 		"""
 
 #####################
-## Quality Control ##
+## Quality Reports ##
 #####################
 
 rule trimmed_fastqc:
@@ -251,7 +249,7 @@ rule trimmed_multiqc:
 	input:
 		expand(trimmed_fastqc_dir + "powell_{sample}_trim_fastqc.zip", sample = config["samples_ALL"])
 	output:
-		TRIMMED_MULTIQC_REPORT = trimmed_fastqc_dir + "powell_trim_multiqc_report.html"
+		TRIMMED_MULTIQC_REPORT = trimmed_fastqc_dir + "powell_trim_multiqc.html"
 	message: "Running MultiQC for FastQC reports on -trimmed- FASTQ files."
 	params:
 		multiqc = multiqc_path,

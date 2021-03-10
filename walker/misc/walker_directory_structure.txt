@@ -5,7 +5,7 @@ except the original .fq files in the walker/01_fastq/by_run directory and
 the manifest file in the main walker/ directory.
 
 This tree shows files in the order that they will be created, which is not 
-necessarily in alphabetical order.
+necessarily in alphabetical order, for a single sample from this project.
 
 
 └── walker
@@ -20,7 +20,7 @@ necessarily in alphabetical order.
     |   |   ├── walker_{sample}_run6.fastq
     |   |   ├── walker_{sample}_run7.fastq
     |   |   ├── walker_{sample}_run8.fastq
-    |   |   └── quality_control
+    |   |   └── qc_reports
     |   |       └── {sample}
     |   |           ├── walker_{sample}_run1_fastqc.html
     |   |           ├── walker_{sample}_run2_fastqc.html
@@ -46,7 +46,7 @@ necessarily in alphabetical order.
     |   |               └── multiqc_sources.txt
     |   └── concatenated
     |       ├── walker_{sample}_cat.fastq
-    |       └── quality_control
+    |       └── qc_reports
     |           ├── walker_{sample}_cat_fastqc.html
     |           ├── walker_{sample}_cat_fastqc.zip
     |           ├── walker_cat_multiqc.html
@@ -57,19 +57,20 @@ necessarily in alphabetical order.
     |               ├── multiqc_general_stats.txt
     |               └── multiqc_sources.txt
     ├── 02_trimmed_fastq
-    |   ├── walker_{sample}_cat_trim.fastq
-    |   ├── logfiles
-    |   |   └── walker_{sample}_trimmomatic.log
-    |   └── quality_control
-    |       ├── walker_{sample}_trim_fastqc.html
-    |       ├── walker_{sample}_trim_fastqc.zip
-    |       ├── walker_trim_multiqc.html
-    |       └── walker_trim_multiqc_data
-    |           ├── multiqc.log
-    |           ├── multiqc_data.json
-    |           ├── multiqc_fastqc.txt
-    |           ├── multiqc_general_stats.txt
-    |           └── multiqc_sources.txt
+    |   └── walker_{sample}_trimmomatic.log
+    |       ├── walker_{sample}_cat_trim.fastq
+    |       ├── stats
+    |       |   └── walker_{sample}_bbduk_stats.txt
+    |       └── qc_reports
+    |           ├── walker_{sample}_trim_fastqc.html
+    |           ├── walker_{sample}_trim_fastqc.zip
+    |           ├── walker_trim_multiqc.html
+    |           └── walker_trim_multiqc_data
+    |               ├── multiqc.log
+    |               ├── multiqc_data.json
+    |               ├── multiqc_fastqc.txt
+    |               ├── multiqc_general_stats.txt
+    |               └── multiqc_sources.txt
     ├── 03_alignment
     |   └── HISAT2
     |       ├── sams

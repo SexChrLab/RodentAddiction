@@ -2,12 +2,12 @@
     "COMMENT_DIRECTORIES_MAIN": "The directories for each step are listed here. Information about what files these directories contain can be found in the corresponding Snakefile.",
     "COMMENT_FASTQ_DIRECTORIES": "Directories containing FASTQ & FastQC/MultiQC files.",
         "run_fastq_dir": "/walker/01_fastq/by_run/",
-        "run_fastqc_dir": "/walker/01_fastq/by_run/quality_control/",
+        "run_fastqc_dir": "/walker/01_fastq/by_run/qc_reports/",
         "cat_fastq_dir": "/walker/01_fastq/concatenated/",
-        "cat_fastqc_dir": "/walker/01_fastq/concatenated/quality_control/",
+        "cat_fastqc_dir": "/walker/01_fastq/concatenated/qc_reports/",
     "COMMENT_TRIMMED_FASTQ_DIRECTORIES": "Directories containing FASTQ & FastQC/MultiQC files.",
-        "trimmed_fastq_dir": "/walker/02_trimmed_fastq/",
-        "trimmed_fastqc_dir": "/walker/02_trimmed_fastq/quality_control/",
+        "trimmed_fastq_dir": "/walker/02_trimmed_fastq/concatenated/",
+        "trimmed_fastqc_dir": "/walker/02_trimmed_fastq/concatenated/qc_reports/",
     "COMMENT_HISAT2_ALIGNMENT_DIRECTORIES": "Directories containing SAM and BAM files from HISAT2 alignment.",
         "hisat2_sams_dir": "/walker/03_alignment/HISAT2/sams/",
         "hisat2_bams_dir": "/walker/03_alignment/HISAT2/bams/",
@@ -131,7 +131,8 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Challenge": "None",
-        "Platform": "Illumina"
+        "Platform": "Illumina",
+        "Model": "HiSeq 2500"
     },
 
     "SRS2926584_C1no": {
@@ -156,7 +157,8 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Challenge": "None",
-        "Platform": "Illumina"
+        "Platform": "Illumina",
+        "Model": "HiSeq 2500"
     },
 
     "SRS2926585_C1no": {
@@ -181,7 +183,8 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Challenge": "None",
-        "Platform": "Illumina"
+        "Platform": "Illumina",
+        "Model": "HiSeq 2500"
     },
 
     "SRS2926587_C1no": {
@@ -206,7 +209,8 @@
         "Drug": "Cocaine",
         "Abstinence_Length": "1d",
         "Challenge": "None",
-        "Platform": "Illumina"
+        "Platform": "Illumina",
+        "Model": "HiSeq 2500"
     },
 
     "SRS2926590_C1no": {

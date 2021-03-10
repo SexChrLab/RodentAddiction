@@ -5,7 +5,7 @@ except the original .fq files in the powell/01_fastq/by_run directory and
 the manifest file in the main powell/ directory.
 
 This tree shows files in the order that they will be created, which is not 
-necessarily in alphabetical order.
+necessarily in alphabetical order, for a single sample from this project.
 
 
 └── powell
@@ -16,7 +16,7 @@ necessarily in alphabetical order.
     |   |   ├── powell_{sample}_run2.fastq
     |   |   ├── powell_{sample}_run3.fastq
     |   |   ├── powell_{sample}_run4.fastq
-    |   |   └── quality_control
+    |   |   └── qc_reports
     |   |       └── {sample}
     |   |           ├── powell_{sample}_run1_fastqc.html
     |   |           ├── powell_{sample}_run2_fastqc.html
@@ -26,7 +26,8 @@ necessarily in alphabetical order.
     |   |           ├── powell_{sample}_run2_fastqc.zip
     |   |           ├── powell_{sample}_run3_fastqc.zip
     |   |           ├── powell_{sample}_run4_fastqc.zip
-    |   |           └── powell_by_run_multiqc_data
+    |   |           ├── powell_{sample}_multiqc.html
+    |   |           └── powell_{sample}_multiqc_data
     |   |               ├── multiqc.log
     |   |               ├── multiqc_data.json
     |   |               ├── multiqc_fastqc.txt
@@ -34,7 +35,7 @@ necessarily in alphabetical order.
     |   |               └── multiqc_sources.txt
     |   └── concatenated
     |       ├── powell_{sample}_cat.fastq
-    |       └── quality_control
+    |       └── qc_reports
     |           ├── powell_{sample}_cat_fastqc.html
     |           ├── powell_{sample}_cat_fastqc.zip
     |           ├── powell_cat_multiqc.html
@@ -45,19 +46,20 @@ necessarily in alphabetical order.
     |               ├── multiqc_general_stats.txt
     |               └── multiqc_sources.txt
     ├── 02_trimmed_fastq
-    |   ├── powell_{sample}_cat_trim.fastq
-    |   ├── logfiles
-    |   |   └── powell_{sample}_trimmomatic.log
-    |   └── quality_control
-    |       ├── powell_{sample}_trim_fastqc.html
-    |       ├── powell_{sample}_trim_fastqc.zip
-    |       ├── powell_trim_multiqc.html
-    |       └── powell_trim_multiqc_data
-    |           ├── multiqc.log
-    |           ├── multiqc_data.json
-    |           ├── multiqc_fastqc.txt
-    |           ├── multiqc_general_stats.txt
-    |           └── multiqc_sources.txt
+    |   └── concatenated
+    |       ├── powell_{sample}_trim.fastq
+    |       ├── stats
+    |       |   └── powell_{sample}_bbduk_stats.txt
+    |       └── qc_reports
+    |           ├── powell_{sample}_trim_fastqc.html
+    |           ├── powell_{sample}_trim_fastqc.zip
+    |           ├── powell_{sample}_trim_multiqc.html
+    |           └── powell_{sample}_trim_multiqc_data
+    |               ├── multiqc.log
+    |               ├── multiqc_data.json
+    |               ├── multiqc_fastqc.txt
+    |               ├── multiqc_general_stats.txt
+    |               └── multiqc_sources.txt
     ├── 03_alignment
     |   └── HISAT2
     |       ├── sams
