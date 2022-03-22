@@ -292,8 +292,3 @@ The RNA-seq workflow will create directories for each dataset that follow the st
             └── walker_SRS2926581_S1no_cat.fq *
 ```
 
-## To-Do List
-- Remove from repository:
-    - powell/circ
-    - post_processing/downloaded_data/miRNAs
-
