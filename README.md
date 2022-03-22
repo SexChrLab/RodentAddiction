@@ -183,7 +183,7 @@ Samples with multiple runs: **{dataset}\_{SRA_Sample_ID}\_{Treatment_Group}_run{
 
 Carpenter FASTQ files should be located in the **carpenter/01_fastq** directory. Powell and Walker have multiple FASTQ files per sample, and should be located in the **powell/01_fastq/by_run** and **walker/01_fastq/by_run** directories, respectively.
 
-Note: One sample (SRS2926581_S1no) from the Walker experiment was produced in a pilot experiment and contains only one run. Its FASTQ file should be renamed `walker_SRS2926581_S1no_*cat*.fq` and placed in the **walker/01_fastq/concatenated** directory. \
+Note: One sample (SRS2926581_S1no) from the Walker experiment was produced in a pilot experiment and contains only one run. Its FASTQ file should be renamed `walker_SRS2926581_S1no_cat.fq` and placed in the **walker/01_fastq/concatenated** directory. \
 If you download the Powell files from SRA, they will *already be concatenated* so this should be taken into account when running these scripts.
 
 ## Note on BBDuk Parameters
