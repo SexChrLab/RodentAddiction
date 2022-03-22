@@ -171,7 +171,7 @@ Snakemake scripts are used to process FASTQ files, align to a reference genome, 
 3. `{dataset}_05_counts.snk` - Creates files in the 05_counts directory
 
 R scripts are used to perform differential expression analysis for each dataset and then analyze the 3 datasets together. R scripts should be run line-by-line in the following order:
-1. `{dataset}_DE.R`
+1. `final_{dataset}_DE.R`
 2. `craving_overlaps_homologs.R`
 
 Lastly, the following scripts can be run in any order: `craving_conservation.R`, `craving_gtex.R`, and `craving_power_analysis.R`. Note that `craving_conservation.R` requires data downloads from Cardoso-Moreira et al. 2020 (PubMed ID: 33113372) and `craving_gtex.R` requires data from GTEx (https://gtexportal.org/home/).
