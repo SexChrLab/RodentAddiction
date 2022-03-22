@@ -1,0 +1,71 @@
+###########################################
+###### Workflow for Salmon alignment ######
+###########################################
+
+## - Information about Project & Samples - ##
+# Original fastq files come from our laboratory and are separated into 4 runs per sample.
+# All sample names (indicated by {sample}) include both the SRA sample ID (SRS#) and the treatment group - e.g. SRS6085261_CI1cue
+# Run # is also listed for applicable files.
+# Concatenated files can be downloaded from SRA (though FASTQ headers have been stripped).
+# SRA Project ID: SRP246331; Bioproject ID: PRJNA604189; Gene Expression Omnibus Series ID: GSE144606
+
+## - Using This Script - ##
+# See README file in GitHub before running these scripts.
+# Remember to change variables under the heading "USERS SHOULD CHANGE THE FOLLOWING VARIABLES"
+
+
+#####################
+## Start of Script ##
+#####################
+
+import os
+
+## - USERS SHOULD CHANGE THE FOLLOWING VARIABLES - ##
+# Config file
+configfile: "powell_config.json"
+
+# Reference Directories
+salmon_index = "/scratch/avannan/refs/rat/Rn6/salmon_index"
+hisat2_index = "/scratch/avannan/refs/rat/mRatBN7.2/HISAT2_splice/mRatBN7.2_genome_tran"
+# Starting Directory
+start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction/"
+## -- END SECTION FOR CHANGING VARIABLES -- ##
+
+
+# Directory Variables
+# Trimmed FASTQs
+trimmed_fastq_dir = os.path.join(start_dir, config["trimmed_fastq_dir"]) # Trimmed FASTQs
+# Alignment
+salmon_dir = os.path.join(start_dir, config["salmon_dir"]) # Checking library type with Salmon
+
+######################
+## All Output Files ##
+######################
+
+rule all:
+	input:
+		# CHECK LIBRARY TYPE (PLUS ALIGN/COUNT) WITH SALMON
+		expand(os.path.join(salmon_dir, "powell_{sample}_salmon_quant/"), sample = config["Iso_ALL"])
+
+##################
+## 03_alignment ##
+##################
+
+####################################
+## Check library type with Salmon ##
+####################################
+
+rule salmon_quant:
+	input:
+		TRIMMED_FASTQ = os.path.join(trimmed_fastq_dir, "powell_{sample}_trim.fastq")
+	output:
+		OUTPUT = os.path.join(salmon_dir, "powell_{sample}_salmon_quant/")
+	params:
+		salmon_index = salmon_index,
+		libtype = "A", # Automatic detection of library type
+		threads = 8
+	shell:
+		"""
+		source ~/miniconda3/etc/profile.d/conda.sh && conda deactivate && conda activate salmon &&
+		salmon quant -i {params.salmon_index} -l {params.libtype} -r {input.TRIMMED_FASTQ} -o {output.OUTPUT}
+		"""

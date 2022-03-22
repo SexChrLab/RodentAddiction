@@ -1,0 +1,107 @@
+## Directory Structure for Walker Dataset ##
+
+All files and folders will be created while running the Snakemake scripts, 
+except the original .fq files in the walker/01_fastq/by_run directory and 
+the manifest file in the main walker/ directory.
+
+This tree shows files in the order that they will be created, which is not 
+necessarily in alphabetical order, for a single sample from this project.
+
+
+└── walker
+    ├── walker_manifest.csv
+    └── 01_fastq
+    |   ├── by_run
+    |   |   ├── walker_{sample}_run1.fastq
+    |   |   ├── walker_{sample}_run2.fastq
+    |   |   ├── walker_{sample}_run3.fastq
+    |   |   ├── walker_{sample}_run4.fastq
+    |   |   ├── walker_{sample}_run5.fastq
+    |   |   ├── walker_{sample}_run6.fastq
+    |   |   ├── walker_{sample}_run7.fastq
+    |   |   ├── walker_{sample}_run8.fastq
+    |   |   └── qc_reports
+    |   |       └── {sample}
+    |   |           ├── walker_{sample}_run1_fastqc.html
+    |   |           ├── walker_{sample}_run2_fastqc.html
+    |   |           ├── walker_{sample}_run3_fastqc.html
+    |   |           ├── walker_{sample}_run4_fastqc.html
+    |   |           ├── walker_{sample}_run5_fastqc.html
+    |   |           ├── walker_{sample}_run6_fastqc.html
+    |   |           ├── walker_{sample}_run7_fastqc.html
+    |   |           ├── walker_{sample}_run8_fastqc.html
+    |   |           ├── walker_{sample}_run1_fastqc.zip
+    |   |           ├── walker_{sample}_run2_fastqc.zip
+    |   |           ├── walker_{sample}_run3_fastqc.zip
+    |   |           ├── walker_{sample}_run4_fastqc.zip
+    |   |           ├── walker_{sample}_run5_fastqc.zip
+    |   |           ├── walker_{sample}_run6_fastqc.zip
+    |   |           ├── walker_{sample}_run7_fastqc.zip
+    |   |           ├── walker_{sample}_run8_fastqc.zip
+    |   |           └── walker_by_run_multiqc_data
+    |   |               ├── multiqc.log
+    |   |               ├── multiqc_data.json
+    |   |               ├── multiqc_fastqc.txt
+    |   |               ├── multiqc_general_stats.txt
+    |   |               └── multiqc_sources.txt
+    |   └── concatenated
+    |       ├── walker_{sample}_cat.fastq
+    |       └── qc_reports
+    |           ├── walker_{sample}_cat_fastqc.html
+    |           ├── walker_{sample}_cat_fastqc.zip
+    |           ├── walker_cat_multiqc.html
+    |           └── walker_cat_multiqc_data
+    |               ├── multiqc.log
+    |               ├── multiqc_data.json
+    |               ├── multiqc_fastqc.txt
+    |               ├── multiqc_general_stats.txt
+    |               └── multiqc_sources.txt
+    ├── 02_trimmed_fastq
+    |   └── walker_{sample}_trimmomatic.log
+    |       ├── walker_{sample}_cat_trim.fastq
+    |       ├── stats
+    |       |   └── walker_{sample}_bbduk_stats.txt
+    |       └── qc_reports
+    |           ├── walker_{sample}_trim_fastqc.html
+    |           ├── walker_{sample}_trim_fastqc.zip
+    |           ├── walker_trim_multiqc.html
+    |           └── walker_trim_multiqc_data
+    |               ├── multiqc.log
+    |               ├── multiqc_data.json
+    |               ├── multiqc_fastqc.txt
+    |               ├── multiqc_general_stats.txt
+    |               └── multiqc_sources.txt
+    ├── 03_alignment
+    |   └── HISAT2
+    |       ├── sams
+    |       |   └── walker_{sample}_hisat2_trim.sam
+    |       └── bams
+    |           └── walker_{sample}_hisat2_trim.bam
+    ├── 04_processing
+    |   └── HISAT2
+    |       ├── sorted_bams
+    |       |   ├── walker_{sample}_hisat2_trim_sort.bam
+    |       |   └── walker_{sample}_hisat2_trim_sort.bam.bai
+    |       └── bamtools_stats
+    |           └── sorted_bams
+    |               └── walker_{sample}_hisat2_trim_sort_stats.txt
+    ├── 05_counts
+    |   └── HISAT2_StringTie
+    |       ├── walker_hisat2_stringtie_list.txt
+    |       ├── genes
+    |       |   └── walker_{sample}_hisat2_stringtie_genes_final.txt
+    |       └── transcripts
+    |           ├── assembled
+    |           |   ├── firstpass
+    |           |   |   └── walker_{sample}_hisat2_stringtie_assembled_transcripts_firstpass.gtf
+    |           |   └── {sample}
+    |           |       ├── walker_{sample}_hisat2_stringtie_assembled_transcripts_final.gtf
+    |           |       ├── e_data.ctab
+    |           |       ├── i_data.ctab
+    |           |       ├── t_data.ctab
+    |           |       ├── e2t.ctab
+    |           |       └── i2t.ctab
+    |           └── covered
+    |               └── walker_{sample}_hisat2_stringtie_covered_transcripts_final.gtf
+    └── 06_differential_expression
+    
