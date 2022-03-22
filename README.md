@@ -8,7 +8,7 @@ Last modified: 03/21/2022
 1. Clone this repository.
 2. Set up Conda environment.
 3. Download FASTQ files for each project from SRA. Rename them to match naming conventions as described in this README.
-4. Using the appropriate config file (`{dataset}_config.json`}), run Snakemake scripts (use SLURM scheduler if available). For each dataset, run scripts in the following order: 
+4. Using the appropriate config file (`{dataset}_config.json`), run Snakemake scripts (use SLURM scheduler if available). For each dataset, run scripts in the following order: 
     a. `{dataset}_01_fastq_02_trimmed_fastq.snk`
     b. `{dataset}_03_alignment_04_processing.snk` and `{dataset}_03_alignment_SALMON.snk`
     c. `{dataset}_05_counts.snk`
