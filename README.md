@@ -8,7 +8,7 @@ Last modified: 03/21/2022
 1. Clone this repository.
 2. Set up Conda environment.
 3. Download FASTQ files for each project from SRA. Rename them to match naming conventions as described in this README.
-4. Using the appropriate config file (`{dataset}_config.json`}), run Snakemake scripts (use SLURM scheduler if available). For each dataset, run scripts in the following order: 
+4. Using the appropriate config file (`{dataset}_config.json`), run Snakemake scripts (use SLURM scheduler if available). For each dataset, run scripts in the following order: 
     a. `{dataset}_01_fastq_02_trimmed_fastq.snk`
     b. `{dataset}_03_alignment_04_processing.snk` and `{dataset}_03_alignment_SALMON.snk`
     c. `{dataset}_05_counts.snk`
@@ -171,7 +171,7 @@ Snakemake scripts are used to process FASTQ files, align to a reference genome, 
 3. `{dataset}_05_counts.snk` - Creates files in the 05_counts directory
 
 R scripts are used to perform differential expression analysis for each dataset and then analyze the 3 datasets together. R scripts should be run line-by-line in the following order:
-1. `{dataset}_DE.R`
+1. `final_{dataset}_DE.R`
 2. `craving_overlaps_homologs.R`
 
 Lastly, the following scripts can be run in any order: `craving_conservation.R`, `craving_gtex.R`, and `craving_power_analysis.R`. Note that `craving_conservation.R` requires data downloads from Cardoso-Moreira et al. 2020 (PubMed ID: 33113372) and `craving_gtex.R` requires data from GTEx (https://gtexportal.org/home/).
@@ -183,7 +183,7 @@ Samples with multiple runs: **{dataset}\_{SRA_Sample_ID}\_{Treatment_Group}_run{
 
 Carpenter FASTQ files should be located in the **carpenter/01_fastq** directory. Powell and Walker have multiple FASTQ files per sample, and should be located in the **powell/01_fastq/by_run** and **walker/01_fastq/by_run** directories, respectively.
 
-Note: One sample (SRS2926581_S1no) from the Walker experiment was produced in a pilot experiment and contains only one run. Its FASTQ file should be renamed `walker_SRS2926581_S1no_*cat*.fq` and placed in the **walker/01_fastq/concatenated** directory. \
+Note: One sample (SRS2926581_S1no) from the Walker experiment was produced in a pilot experiment and contains only one run. Its FASTQ file should be renamed `walker_SRS2926581_S1no_cat.fq` and placed in the **walker/01_fastq/concatenated** directory. \
 If you download the Powell files from SRA, they will *already be concatenated* so this should be taken into account when running these scripts.
 
 ## Note on BBDuk Parameters
@@ -291,9 +291,4 @@ The RNA-seq workflow will create directories for each dataset that follow the st
         └── concatenated
             └── walker_SRS2926581_S1no_cat.fq *
 ```
-
-## To-Do List
-- Remove from repository:
-    - powell/circ
-    - post_processing/downloaded_data/miRNAs
 
