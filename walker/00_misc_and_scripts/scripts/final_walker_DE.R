@@ -91,7 +91,7 @@ g_original <- Reduce(function(x, y)
 # Are there any discrepancies in the dataset?
 # Search for NAs - No NAs
 g_original %>% mutate(across(everything(), as.factor)) %>% summary()
-# Search for duplicate genes - No duplicates
+# Search for duplicate genes - No duplicate genes (n=1 is at the top)
 g_original %>% group_by(Gene_ID) %>% count() %>% arrange(desc(n)) %>% head()
 
 
@@ -380,10 +380,10 @@ registerDoParallel(cl)
 palette <- c(wes_palette("Chevalier1", 4, type = "discrete")[-3], "grey85")
 
 # Treatment model
-# More variance is explained by Instrument than Batch in this model
+# More variance is explained by Batch than Instrument in this model
 #vp_treat <- fitExtractVarPartModel(v_treat, form, final_gene_dge$samples)
-#saveRDS(vp_treat, file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat.RDS"))
-vp_treat <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat.RDS"))
+#saveRDS(vp_treat, file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat.RDS"))
+vp_treat <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat.RDS"))
 vp_treat <- sortCols(vp_treat)
 bars_treat <- plotPercentBars(vp_treat[1:10, ]) +
   scale_fill_manual(values = palette,
@@ -399,8 +399,8 @@ ggarrange(varpart_treat, bars_treat)
 # Treatment + Batch model
 # More variance is explained by Batch than Instrument with this model
 #vp_treat_batch <- fitExtractVarPartModel(v_treat_batch, form, final_gene_dge$samples)
-#saveRDS(vp_treat_batch, file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat_batch.RDS"))
-vp_treat_batch <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat_batch.RDS"))
+#saveRDS(vp_treat_batch, file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat_batch.RDS"))
+vp_treat_batch <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat_batch.RDS"))
 vp_treat_batch <- sortCols(vp_treat_batch)
 bars_batch <- plotPercentBars(vp_treat_batch[1:10, ]) +
   scale_fill_manual(values = palette,
@@ -416,8 +416,8 @@ ggarrange(varpart_batch, bars_batch)
 # Treatment + Instrument model
 # More variance is explained by Instrument than Batch with this model
 #vp_treat_ins <- fitExtractVarPartModel(v_treat_ins, form, final_gene_dge$samples)
-#saveRDS(vp_treat_ins, file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat_ins.RDS"))
-vp_treat_ins <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat_ins.RDS"))
+#saveRDS(vp_treat_ins, file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat_ins.RDS"))
+vp_treat_ins <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat_ins.RDS"))
 vp_treat_ins <- sortCols(vp_treat_ins)
 bars_ins <- plotPercentBars(vp_treat_ins[1:10, ]) +
   scale_fill_manual(values = palette,
@@ -430,11 +430,11 @@ varpart_ins <- plotVarPart(vp_treat_ins) +
         panel.grid.major.x = element_blank())
 ggarrange(varpart_ins, bars_ins)
 
-# Treatment + Instrument model
-# More variance is explained by Instrument than Batch or Treatment with this model
+# Treatment + Batch + Instrument model
+# More variance is explained by Batch than Instrument or Treatment with this model
 #vp_treat_batch_ins <- fitExtractVarPartModel(v_treat_batch_ins, form, final_gene_dge$samples)
-#saveRDS(vp_treat_batch_ins , file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat_batch_ins.RDS"))
-vp_treat_batch_ins <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker_FINAL_treat_batch_ins.RDS"))
+#saveRDS(vp_treat_batch_ins , file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat_batch_ins.RDS"))
+vp_treat_batch_ins <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/walker/walker_FINAL_treat_batch_ins.RDS"))
 vp_treat_batch_ins <- sortCols(vp_treat_batch_ins)
 bars_batch_ins <- plotPercentBars(vp_treat_batch_ins[1:10, ]) +
   scale_fill_manual(values = palette,
@@ -469,8 +469,11 @@ treat_batch_cm <- makeContrasts(S30sal_C30sal = S30sal - C30sal,
                                 levels = colnames(des_treat_batch))
 treat_ins_cm <- makeContrasts(S30sal_C30sal = S30sal - C30sal, 
                               levels = colnames(des_treat_ins))
+
+des_treat_batch_ins2 <- des_treat_batch_ins
+colnames(des_treat_batch_ins2) <- gsub("\\-", "_", colnames(des_treat_batch_ins2))
 treat_batch_ins_cm <- makeContrasts(S30sal_C30sal = S30sal - C30sal, 
-                                    levels = colnames(des_treat_batch_ins))
+                                    levels = colnames(des_treat_batch_ins2))
 
 # Fit the models and contrasts, then run contrasts
 treat_fm <- lmFit(v_treat, des_treat)

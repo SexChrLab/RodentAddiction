@@ -469,9 +469,9 @@ registerDoParallel(cl)
 palette <- c(wes_palette("Chevalier1", 4, type = "discrete"), "grey85")[-c(2,3)]
 
 # Treatment model
-vp_treat <- fitExtractVarPartModel(v_treat, form, final_gene_dge$samples)
-saveRDS(vp_treat, file = paste0(main_dir, "post_processing/results/variance_partition/powell_FINAL_treat.RDS")
-vp_treat <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/powell_FINAL_treat.RDS"))
+#vp_treat <- fitExtractVarPartModel(v_treat, form, final_gene_dge$samples)
+#saveRDS(vp_treat, file = paste0(main_dir, "post_processing/results/variance_partition/powell/powell_FINAL_treat.RDS")
+vp_treat <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/powell/powell_FINAL_treat.RDS"))
 vp_treat <- sortCols(vp_treat)
 bars_treat <- plotPercentBars(vp_treat[1:10, ]) +
   scale_fill_manual(values = palette,
@@ -486,9 +486,9 @@ varpart_treat <- plotVarPart(vp_treat) +
 ggarrange(varpart_treat, bars_treat)
 
 # Treatment + Lane model
-vp_treat_lane <- fitExtractVarPartModel(v_treat_lane, form, final_gene_dge$samples)
-saveRDS(vp_treat_lane, file = paste0(main_dir, "post_processing/results/variance_partition/powell_FINAL_treat_lane.RDS"))
-vp_treat_lane <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/powell_FINAL_treat_lane.RDS"))
+#vp_treat_lane <- fitExtractVarPartModel(v_treat_lane, form, final_gene_dge$samples)
+#saveRDS(vp_treat_lane, file = paste0(main_dir, "post_processing/results/variance_partition/powell/powell_FINAL_treat_lane.RDS"))
+vp_treat_lane <- readRDS(file = paste0(main_dir, "post_processing/results/variance_partition/powell/powell_FINAL_treat_lane.RDS"))
 vp_treat_lane <- sortCols(vp_treat_lane)
 bars_lane <- plotPercentBars(vp_treat_lane[1:10, ]) +
   scale_fill_manual(values = palette,

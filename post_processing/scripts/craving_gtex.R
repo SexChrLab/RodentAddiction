@@ -24,9 +24,9 @@ library(MatchIt)
 
 ## BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
-main_dir <- "C:/Annika/GitHub Repositories/RodentAddiction/"
-de_dir <- paste0(main_dir, "results/gene_info/")
-gtex_dir <- paste0(main_dir, "downloaded_data/gtex/")
+main_dir <- "C:/Annika/Github Repositories/RodentAddiction/"
+de_dir <- paste0(main_dir, "post_processing/results/gene_info/")
+gtex_dir <- paste0(main_dir, "post_processing/downloaded_data/gtex/")
 
 # Reduce chances of scientific notation
 options(scipen = 9999)
@@ -41,7 +41,7 @@ theme_set(new_theme)
 
 ## LOAD IN GENE LISTS ----------
 # All in one list
-all_genes_list <- readRDS(file = paste0(main_dir, "results/other/all_genes_list.RDS"))
+all_genes_list <- readRDS(file = paste0(main_dir, "post_processing/results/other/all_genes_list.RDS"))
 
 # Separate list into multiple objects
 list2env(all_genes_list, envir = .GlobalEnv)
@@ -163,7 +163,7 @@ gtex <- gtex_all %>%
   mutate(System_Total = sum(Mean_TPM), .after = "System") %>%
   ungroup()
 
-# How many craving genes in GTEX data? (31)
+# How many craving genes in GTEX data? (32)
 gtex %>% 
   group_by(Gene_Group) %>% 
   dplyr::select(Human_ID) %>% 
@@ -222,7 +222,8 @@ pt_att %>%
 ## LOAD IN BY-TISSUE TPM FILES ----------
 # Get list of files, then load in all files
 subset_files <- list.files(path = paste0(gtex_dir, "count_subsets"), 
-                           pattern = "subset*", full.names = TRUE)
+                           pattern = "subset*", full.names = TRUE) %>%
+  .[-1]
 
 # Tissue names in alphabetical order (except Pituitary last), as a vector
 tissue_ids <- c("Amygdala", "Anterior_Cingulate", "Caudate", "Cerebellar_Hemisphere", 
@@ -556,7 +557,7 @@ bs_plot <- brain_spec %>%
                      hide.ns = FALSE, label.y = c(9.3), tip.length = c(0, 0.05))
 
 # Save as pdf
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_1_24_2022.svg", width = 4, height = 5.5)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_1_24_2022.svg", width = 4, height = 5.5)
 # bs_plot
 # dev.off()
 
@@ -736,24 +737,143 @@ sex_plot <- function(gene, high_limit, break_unit, rect = "#DE8971",
           axis.text.x = element_text(size = 11),
           axis.ticks.x = element_blank(),
           plot.margin = margin(0.25, 0.25, 0.75, 0.25, "cm"),
-          strip.background = element_rect(fill = rect)) +
+          strip.background = element_rect(fill = rect),
+          legend.text = element_text(size = 14),
+          legend.key.size = unit(1.5, "cm"),
+          strip.text.x = element_text(size = 14)) +
     facet_wrap(~ Human_Symbol) +
-    geom_text(data = cld_info, aes(x = Tissue, y = pos, label = Group))
+    geom_text(data = cld_info, aes(x = Tissue, y = pos, label = Group), size = 5)
 }
 # 1200, 425 is 4 per page
 
 
-sex_plot("KIF5A", 2575, 500, pos = c(1900, 1400, 1100, 1600, 2575, 1600, 800, 1100, 300, 950, 400, 650))
-sex_plot("LYPD1", 72, 10, pos = c(45, 58, 72, 20, 35, 58, 65, 68, 72, 49, 45, 42))
-sex_plot("GPD1", 375, 40, pos = c(50, 55, 30, 45, 30, 85, 85, 45, 35, 65, 85, 375))
-sex_plot("CELF6", 120, 20, pos = c(45, 30, 25, 65, 43, 35, 101, 105, 117, 25, 38, 35))
-sex_plot("IRS2", 105, 20, pos = c(56, 46, 35, 75, 47, 58, 88, 84, 105, 27, 27, 45))
-x, x, x, x, x, x, x, x, x, x, x, x
-x, x, x, x, x, x, x, x, x, x, x, x
-x, x, x, x, x, x, x, x, x, x, x, x
-x, x, x, x, x, x, x, x, x, x, x, x
-sex_plot("NTS", 565, 50, pos = c(40, 120, 125, 80, 40, 270, 220, 70, 565, 40, 320, 220))
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/AGK_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("AGK", 60, 10, pos = c(38, 23, 26, 55, 38, 28, 35, 28, 33, 25, 26, 28))
+dev.off()
 
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/AMZ1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("AMZ1", 8, 2, pos = c(5, 7, 5.7, 3.2, 7.5, 5, 5.5, 7.2, 5, 5.5, 5, 3.6))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/B2M_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("B2M", 8200, 1000, pos = c(6700, 8200, 1500, 1600, 5300, 5300, 7300, 5400, 2700, 1300, 1600, 2400))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/BCAS1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("BCAS1", 2100, 400, pos = c(900, 950, 500, 320, 1500, 900, 950, 1050, 200, 1300, 1100, 2100))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/BTG1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("BTG1", 565, 50, pos = c(185, 230, 70, 335, 85, 145, 170, 120, 230, 70, 70, 255))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CACYBP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("CACYBP", 565, 50, pos = c(220, 185, 240, 435, 270, 180, 220, 420, 380, 150, 140, 250))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CARTPT_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("CARTPT", 5150, 1000, pos = c(400, 600, 400, 400, 700, 500, 5150, 800, 600, 400, 400, 500))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CCDC88C_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("CCDC88C", 50, 10, pos = c(15, 19, 42, 6, 8, 15, 17, 49, 25, 35, 6, 12))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CELF6_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("CELF6", 120, 20, pos = c(45, 30, 25, 65, 43, 35, 101, 105, 117, 25, 38, 35))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/EGR2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("EGR2", 205, 20, pos = c(30, 35, 55, 65, 28, 50, 37, 42, 205, 46, 26, 50))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/FABP7_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("FABP7", 265, 50, pos = c(130, 90, 80, 220, 90, 85, 265, 85, 50, 45, 55, 94))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/FKBP4_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("FKBP4", 600, 100, pos = c(240, 190, 320, 560, 380, 220, 240, 430, 530, 280, 190, 350))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/FTH1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("FTH1", 5200, 1000, pos = c(3800, 3300, 2400, 1500, 4600, 3500, 3000, 3300, 5200, 4000, 2900, 5200))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/GPD1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("GPD1", 375, 40, pos = c(50, 55, 30, 45, 30, 85, 85, 45, 35, 65, 85, 375))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/GUCY1A3_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("GUCY1A3", 35, 5, pos = c(15, 14, 24, 7, 16, 9, 15, 34.5, 30, 24, 8, 24))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/HAPLN2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("HAPLN2", 2400, 400, pos = c(820, 360, 360, 320, 320, 740, 670, 420, 200, 950, 930, 2300))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/HSPA8_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("HSPA8", 4650, 750, pos = c(1200, 1000, 1800, 4650, 2000, 1100, 1400, 2450, 3950, 1000, 1200, 1400))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/IRS2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("IRS2", 105, 20, pos = c(56, 46, 35, 75, 47, 58, 88, 84, 105, 27, 27, 45))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/KIF5A_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("KIF5A", 2575, 500, pos = c(1900, 1400, 1100, 1600, 2575, 1600, 800, 1100, 300, 950, 400, 650))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/LYPD1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("LYPD1", 72, 10, pos = c(45, 58, 72, 20, 35, 58, 65, 68, 72, 49, 45, 42))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/MBP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("MBP", 25000, 5000, pos = c(9000, 11000, 4100, 3400, 14000, 9000, 10000, 8000, 2000, 11000, 11000, 24800))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/MOBP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("MOBP", 3500, 500, pos = c(1250, 1350, 450, 400, 1650, 1300, 1650, 850, 330, 1350, 1530, 3300))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/NTS_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("NTS", 565, 50, pos = c(40, 120, 125, 80, 40, 270, 220, 70, 565, 40, 320, 220))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/PHLDA1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("PHLDA1", 120, 20, pos = c(32, 35, 32, 31, 40, 43, 52, 45, 115, 32, 32, 32))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/PITPNM3_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("PITPNM3", 150, 25, pos = c(90, 102, 80, 148, 90, 70, 60, 95, 20, 65, 25, 35))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/RGS5_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("RGS5", 365, 50, pos = c(180, 145, 210, 170, 200, 190, 255, 248, 365, 225, 220, 220))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/RPS6KA2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("RPS6KA2", 210, 50, pos = c(95, 75, 92, 55, 80, 60, 95, 90, 90, 75, 110, 210))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/SOX17_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("SOX17", 30.5, 5, pos = c(11, 20, 9.5, 7, 9, 8.5, 11, 7, 22, 9, 11, 30.5))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/TIPARP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("TIPARP", 120, 20, pos = c(43, 46, 38, 44, 50, 55, 75, 73, 80, 30, 27, 120))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/TTLL1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("TTLL1", 50, 10, pos = c(29, 38, 25, 48, 32, 33, 42, 32, 38, 25, 24, 32))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/USP46_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("USP46", 62, 10, pos = c(42, 42, 37, 62, 46, 45, 36, 42, 28, 32, 33, 44))
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/VIM_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
+sex_plot("VIM", 5000, 1000, pos = c(1000, 1200, 1200, 600, 850, 1300, 1100, 3400, 4900, 1200, 700, 1200))
+dev.off()
 
 vert_gene_plot <- function(gene_name, x_lim, br, strip_color = "#DE8971", 
                  blanks = "black") {
@@ -790,33 +910,33 @@ vert_gene_plot <- function(gene_name, x_lim, br, strip_color = "#DE8971",
     facet_wrap(~ Human_Symbol, ncol = 4, nrow = 1, scales = "free_y")
 }
 
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/MOBP_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/MOBP_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
 # vert_gene_plot("MOBP", 1500, 500, "#DE8971", "black")
 # dev.off()
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/KIF5A_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/KIF5A_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
 # vert_gene_plot("KIF5A", 1200, 400, "#DE8971", "white")
 # dev.off()
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/MBP_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/MBP_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
 # vert_gene_plot("MBP", 10000, 2000, "#DE8971", "white")
 # dev.off()
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/HAPLN2_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/HAPLN2_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
 # vert_gene_plot("HAPLN2", 800, 200, "#DE8971", "white")
 # dev.off()
 
 
 # Comparison genes
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/CREB1_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/CREB1_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
 # vert_gene_plot("CREB1", 18, 3, "grey80", "black")
 # dev.off()
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/C1QL2_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/C1QL2_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
 # vert_gene_plot("C1QL2", 24, 4, "grey80", "white")
 # dev.off()
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/DRD3_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/DRD3_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
 # vert_gene_plot("DRD3", 4, 1, "grey80", "black")
 # dev.off()
 
 # Craving genes
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/SYT1_Tissue.svg", width = 2.65, height = 5.4)
+# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/SYT1_Tissue.svg", width = 2.65, height = 5.4)
 # vert_gene_plot("SYT1", 350, 75, "#DE8971", "black")
 # dev.off()
 
