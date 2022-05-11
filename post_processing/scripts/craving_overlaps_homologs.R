@@ -15,6 +15,9 @@ library(org.Mm.eg.db)
 library(org.Rn.eg.db)
 library(limma)
 
+# Other
+library(clipr)
+
 
 
 ## BEFORE USING THIS SCRIPT ----------
@@ -127,7 +130,7 @@ full_df <- Reduce(function(x, y)
   mutate(across(everything(), function(x) na_if(x, ""))) %>%
   filter(!is.na(Study))
 
-# Get Powell genes
+# Get Powell gene names, since names are not on original file
 full_df %>%
   filter(Study == "Powell") %>%
   dplyr::select(-Gene.Name) %>%
@@ -167,8 +170,8 @@ sig_df_ponly %>%
             max_FC = max(FC))
 
 # Sig with p-value and FC
-sig_df <- full_df %>% filter(P.Value < 0.05, abs(logFC) > log2(1.2))
-sig_df %>%
+sig_df_fc <- full_df %>% filter(P.Value < 0.05, abs(logFC) > log2(1.2))
+sig_df_fc %>%
   group_by(Study) %>%
   mutate(logFC = abs(logFC), FC = 2^(abs(logFC))) %>%
   summarize(min_logFC = min(logFC), mean_logFC = mean(logFC), 
@@ -176,7 +179,7 @@ sig_df %>%
             min_FC = min(FC), mean_FC = mean(FC), median_FC = median(FC), 
             max_FC = max(FC))
 
-# Significant genes only
+# Significant genes only (rewrite "sig_df")
 sig_df_fc <- full_df %>% filter(P.Value < 0.05, abs(logFC) > log2(1.2))
 sig_df <- full_df %>% filter(P.Value < 0.05)
 
@@ -266,21 +269,14 @@ vo3 <- volcano_plot(full_df, "Powell", "#DDCC77", c(-10, 4), seq(-10, 4, 2), 5.2
 # 390, 420
 
 # svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Carpenter_volcano_1_24_2022.svg", width = 4.25, height = 4.25)
-# vo1
+vo1
 # dev.off()
 # svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Walker_volcano__1_24_2022.svg", width = 4.25, height = 4.25)
-# vo2
+vo2
 # dev.off()
 # svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Powell_volcano__1_24_2022.svg", width = 4.25, height = 4.25)
-# vo3
+vo3
 # dev.off()
-
-
-library(VennDiagram)
-draw.pairwise.venn(area1 = 633, area2 = 139, cross.area = 15)
-draw.pairwise.venn(area1 = 139, area2 = 548, cross.area = 5)
-draw.pairwise.venn(area1 = 633, area2 = 548, cross.area = 45)
-
 
 
 
@@ -289,11 +285,11 @@ draw.pairwise.venn(area1 = 633, area2 = 548, cross.area = 45)
 sig_mm_ids <- sig_df %>% 
   filter(Study == "Carpenter" | Study == "Walker") %>% 
   pull(Original_Gene_ID)
-length(sig_mm_ids) # 772 (245 w/ LFC)
+length(sig_mm_ids) # 772
 
 # Get shared gene IDs
 shared_mm_ids <- sig_mm_ids[duplicated(sig_mm_ids)]
-length(shared_mm_ids) # 15 (8 w/ LFC)
+length(shared_mm_ids) # 15
 
 # Get dataframe with all relevant mouse info
 sig_mm_bm <- getBM(attributes = c("external_gene_name", # Gene symbol
@@ -345,7 +341,7 @@ mouse_same_reg <- mouse_reg %>% filter(str_detect(Is_Same_Direction, "Both"))
 mouse_id_same_reg <- mouse_same_reg %>% pull(ORIG_Gene_ID)
 
 # How many genes are regulated in the same direction?
-length(mouse_id_same_reg) # 10/15 (5/8 w/ LFC)
+length(mouse_id_same_reg) # 10/15
 
 # Do the genes have human and rat homologs? 
 # This is repetitive with earlier code to double-check results.
@@ -367,8 +363,8 @@ mouse_hs_ids <- final_mouse_bm %>% filter(!is.na(Human_ID), Mouse_ID %in% mouse_
 mouse_rn_ids <- final_mouse_bm %>% filter(!is.na(Rat_ID), Mouse_ID %in% mouse_id_same_reg) %>% pull(Rat_ID) %>% unique()
 
 # How many unique rat and human genes?
-length(mouse_hs_ids) # 9 (4 w/ LFC)
-length(mouse_rn_ids) # 11 (4 w/ LFC)
+length(mouse_hs_ids) # 9
+length(mouse_rn_ids) # 11
 
 # Get vectors of shared Carpenter/Walker genes, w/ and w/o direction
 # All shared
@@ -442,7 +438,7 @@ sig_powell_mouse_hom_df %>%
 powell_mouse_id <- sig_mm_bm %>% filter(Mouse_ID %in% sig_powell_mouse_hom) %>% pull(Mouse_ID) %>% unique()
 powell_rat_id <- sig_mm_bm %>% filter(Rat_ID %in% sig_powell_rat) %>% pull(Rat_ID) %>% unique()
 
-# Check length - 46 genes (16 w/ LFC)
+# Check length - 49 genes
 powell_mouse_id %>% length()
 powell_rat_id %>% length()
 
@@ -461,7 +457,7 @@ carp_pow_shared_rat <- sig_powell_mouse_hom_df %>%
   filter(Mouse_ID %in% carp_ids) %>%
   pull(Original_Gene_ID)
 
-length(carp_pow_shared_mouse) # 45 genes (less b/c it doesn't include other dataset)
+length(carp_pow_shared_mouse) # 45 genes (less than above, b/c it doesn't include other (Walker) dataset)
 length(carp_pow_shared_rat) # 47 genes
 
 # Direction
@@ -509,10 +505,9 @@ carp_pow_reg_info %>% filter(Is_Same_Direction == "Check_Manually") %>% View()
 # Add ENSRNOG00000052224 to the shared genes by modifying dataframe
 carp_pow_reg_info2 <- carp_pow_reg_info %>%
   mutate(Is_Same_Direction = case_when(Rat_ID == "ENSRNOG00000052224" ~ "Both_Down",
-                                       Rat_ID == "ENSRNOG00000031855" ~ "Both_Up",
                                        TRUE ~ Is_Same_Direction))
 
-# How many are in the same direction? (22/45 genes)
+# How many are in the same direction? (21/45 genes)
 rat_carp_same_reg <- carp_pow_reg_info2 %>% 
   filter(str_detect(Is_Same_Direction, "Both")) %>%
   pull(Rat_ID)
@@ -619,7 +614,7 @@ crave_rn <- c(carp_walk_rn, carp_pow_rn, walk_pow_rn) %>% unique() # 75
 crave_hs <- c(carp_walk_hs, carp_pow_hs, walk_pow_hs) %>% unique() # 60
 # Same direction
 sd_crave_mm <- c(carp_walk_mm_same, carp_pow_mm_same, walk_pow_mm_same) %>% unique() # 34
-sd_crave_rn <- c(carp_walk_rn_same, carp_pow_rn_same, walk_pow_rn_same) %>% unique() # 34
+sd_crave_rn <- c(carp_walk_rn_same, carp_pow_rn_same, walk_pow_rn_same) %>% unique() # 35
 sd_crave_hs <- c(carp_walk_hs_same, carp_pow_hs_same, walk_pow_hs_same) %>% unique() # 33
 
 sd_crave_hs %>% sort()

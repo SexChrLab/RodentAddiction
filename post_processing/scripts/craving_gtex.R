@@ -20,11 +20,14 @@ library(rstatix)
 # Matching samples
 library(MatchIt)
 
+# Other
+library(clipr)
+
 
 
 ## BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
-main_dir <- "C:/Annika/Github Repositories/RodentAddiction/"
+main_dir <- "G:/Noctsol/Github Repositories/RodentAddiction/"
 de_dir <- paste0(main_dir, "post_processing/results/gene_info/")
 gtex_dir <- paste0(main_dir, "post_processing/downloaded_data/gtex/")
 
@@ -508,10 +511,10 @@ gtex_spec <- Reduce(full_join, list(gtex, brain_spec_firstpass, wnbrain_perc)) %
 
 cns_means <- gtex_spec %>% 
   filter(System == "CNS", Gene_Group == "Craving") %>%
-  select(Human_ID, Human_Symbol, Tissue, Mean_TPM, Median_TPM) %>%
+  dplyr::select(Human_ID, Human_Symbol, Tissue, Mean_TPM, Median_TPM) %>%
   group_by(Human_ID) %>%
   mutate(CNS_Mean = mean(Mean_TPM)) %>%
-  select(Human_ID, Human_Symbol, CNS_Mean) %>%
+  dplyr::select(Human_ID, Human_Symbol, CNS_Mean) %>%
   arrange(Human_Symbol) %>%
   unique()
 
@@ -558,7 +561,7 @@ bs_plot <- brain_spec %>%
 
 # Save as pdf
 # svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_1_24_2022.svg", width = 4, height = 5.5)
-# bs_plot
+bs_plot
 # dev.off()
 
 # One-sample Wilcoxon tests
@@ -573,8 +576,8 @@ one_sample_wilcox <- function(group) {
 }
 
 # Are craving genes highly expressed in the brain?
-one_sample_wilcox("Craving") # n = 31, statistic = 194, p = 0.497
-one_sample_wilcox("All Other Genes") # n = 55305, statistic = 58055663, p = 0
+one_sample_wilcox("Craving")
+one_sample_wilcox("All Other Genes")
 
 # Wilcoxon test between groups
 # Are craving genes more specific to the brain than other genes?
@@ -595,9 +598,6 @@ summary_brainspec <- gtex_spec %>%
   summarize(Mean_BrainSpec = mean(BrainSpec), 
             Median_BrainSpec = median(BrainSpec))
 summary_brainspec
-# Gene_Group      Mean_BrainSpec Median_BrainSpec
-# 1 Craving                 -0.483            -1.54
-# 2 All Other Genes         -2.71             -2.51
 
 # This can be sorted to look for interesting targets
 crav_gtex_info <- gtex_spec %>%
@@ -605,7 +605,7 @@ crav_gtex_info <- gtex_spec %>%
   dplyr::select(Human_ID, Human_Symbol, Tissue, BrainSpec, WithinBrain_Perc) %>%
   unique()
 
-# 10 genes have higher expression in brain than the rest of the body (SYT1)
+# 11 genes have higher expression in brain than the rest of the body
 crav_gtex_info %>% 
   dplyr::select(-c(Tissue, WithinBrain_Perc)) %>%
   filter(BrainSpec > 0) %>%
@@ -613,22 +613,22 @@ crav_gtex_info %>%
   arrange(desc(BrainSpec)) %>%
   pull(Human_Symbol)
 # [1] "MOBP"   "KIF5A"  "MBP"    "HAPLN2" "BCAS1"  "FABP7" 
-# [7] "LYPD1"  "CARTPT" "AMZ1"   "NTS"   
+# [7] "LYPD1"  "CARTPT" "AMZ1"   "NTS"
 
 # Rank brain tissues by highest expression
 rank_brain <- gtex_spec %>% 
   group_by(Human_ID) %>%
   filter(System == "CNS") %>%
-  mutate(Rank = dense_rank(desc(WithinBrain_Perc)), .before = Tissue) %>%
-  select(Human_ID, Human_Symbol, BrainSpec, Rank, Tissue, WithinBrain_Perc,
-         Mean_TPM, Gene_Group)
+  mutate(Rank = dense_rank(dplyr::desc(WithinBrain_Perc)), .before = Tissue) %>%
+  dplyr::select(Human_ID, Human_Symbol, BrainSpec, Rank, Tissue, WithinBrain_Perc,
+                Mean_TPM, Gene_Group)
 
 # Short tables w/ top 5 regions for publication
 # Function
 wnbrain_table <- function(group) {
   rank_brain %>%
     filter(Gene_Group == group, Rank <= 5) %>%
-    select(-Gene_Group) %>%
+    dplyr::select(-Gene_Group) %>%
     arrange(Human_Symbol, Rank)
 }
 
@@ -640,7 +640,7 @@ rank_crave <- rank_brain %>% filter(Gene_Group == "Craving")
 
 # Get genes with high expression (>= 10% of brain expression) in reward Systems
 reward_rank <- rank_crave %>%
-  select(-Gene_Group) %>%
+  dplyr::select(-Gene_Group) %>%
   filter(WithinBrain_Perc >= 0.10) %>%
   filter(!Tissue %in% c("BRN-CB-a", "BRN-HYP", "BRN-SPC", "BRN-PTRY")) %>%
   arrange(Human_Symbol, Rank)
@@ -658,7 +658,7 @@ tukey_tissue %>% write_clip()
 
 rank_crave %>%
   relocate(Human_Symbol, .before = everything()) %>%
-  select(1:3) %>%
+  dplyr::select(1:3) %>%
   unique() %>%
   arrange(Human_Symbol) %>%
   write_clip()

@@ -28,9 +28,8 @@ for (i in 1:length(every_obj)) {
   treat <- every_obj[[i]][["Treat"]]
   control <- every_obj[[i]][["Control"]]
   nGenes <- nrow(every_obj[[i]][["Gene_Info"]]) # Total number of genes
-  up <- every_obj[[i]][["Stats_Summary"]][["Up"]]/every_obj[[i]][["Stats_Summary"]][["Total"]]
+  up <- every_obj[[i]][["Stats_Summary"]][["Up"]]/every_obj[[i]][["Stats_Summary"]][["Total"]]   # Prop. of up-regulated genes among all DE genes
   actual_fc <- 2^abs(every_obj[[i]][["Stats"]][["logFC"]])
-  # Prop. of up-regulated genes among all DE genes
   
   # Calculate means per gene, for the control group
   mu <- apply(every_obj[[i]][["Gene_Matrix"]][, treat == control], 1, mean)
@@ -56,15 +55,7 @@ every_var[[length(every_var) + 1]] <- list(disp = 0.1, nGenes = 10000, mu = 10, 
 # Fix names
 every_var <- setNames(every_var, c(names(every_obj), "test_case"))
 
-
-as.vector(every_var$carpenter$actual_fc) %>% mean()
-as.vector(every_var$carpenter$actual_fc) %>% median()
-as.vector(every_var$walker$actual_fc) %>% mean()
-as.vector(every_var$walker$actual_fc) %>% median()
-as.vector(every_var$powell$actual_fc) %>% mean()
-as.vector(every_var$powell$actual_fc) %>% median()
-
-
+# Check dispersion
 as.vector(every_var$carpenter$disp) %>% mean()
 as.vector(every_var$carpenter$disp) %>% median()
 as.vector(every_var$walker$disp) %>% mean()
