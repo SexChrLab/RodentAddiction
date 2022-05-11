@@ -27,7 +27,7 @@ library(clipr)
 
 ## BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
-main_dir <- "G:/Noctsol/Github Repositories/RodentAddiction/"
+main_dir <- "C:/Annika/Github Repositories/RodentAddiction/"
 de_dir <- paste0(main_dir, "post_processing/results/gene_info/")
 gtex_dir <- paste0(main_dir, "post_processing/downloaded_data/gtex/")
 
