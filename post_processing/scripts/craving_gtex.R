@@ -396,7 +396,7 @@ sex_summary <- final_bysex_tpm %>%
 tukey_tissue <- final_bysex_tpm %>%
   filter(Tissue != "Cerebellum", Tissue != "Cortex") %>%
   mutate(Tissue = gsub("-", "_", Tissue)) %>%
-  filter(Human_Symbol %in% genes_tissue, !Human_Symbol %in% genes_inter) %>%
+  filter(Human_Symbol %in% genes_tissue | Human_Symbol %in% genes_inter) %>%
   group_by(Human_Symbol) %>%
   tukey_hsd(TPM ~ Tissue) %>%
   as.data.frame()

@@ -20,7 +20,7 @@ library(limma)
 ## BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
 main_dir <- "C:/Annika/GitHub Repositories/RodentAddiction/"
-de_dir <- paste0(main_dir, "results/gene_info/")
+de_dir <- paste0(main_dir, "post_processing/results/gene_info/")
 
 # Reduce chances of scientific notation
 options(scipen = 9999)
@@ -509,9 +509,10 @@ carp_pow_reg_info %>% filter(Is_Same_Direction == "Check_Manually") %>% View()
 # Add ENSRNOG00000052224 to the shared genes by modifying dataframe
 carp_pow_reg_info2 <- carp_pow_reg_info %>%
   mutate(Is_Same_Direction = case_when(Rat_ID == "ENSRNOG00000052224" ~ "Both_Down",
+                                       Rat_ID == "ENSRNOG00000031855" ~ "Both_Up",
                                        TRUE ~ Is_Same_Direction))
 
-# How many are in the same direction? (20/45 genes)
+# How many are in the same direction? (22/45 genes)
 rat_carp_same_reg <- carp_pow_reg_info2 %>% 
   filter(str_detect(Is_Same_Direction, "Both")) %>%
   pull(Rat_ID)
@@ -596,7 +597,7 @@ walk_down <- walk_only %>% filter(Direction == "Down") %>% pull(Original_Gene_ID
 carp_pow_mm <- carp_pow_shared_mouse
 carp_pow_rn <- sig_mm_bm %>% filter(Mouse_ID %in% carp_pow_shared_mouse, Rat_ID %in% carp_pow_shared_rat) %>% pull(Rat_ID) %>% unique()
 carp_pow_hs <- sig_mm_bm %>% filter(Mouse_ID %in% carp_pow_shared_mouse) %>% filter(Human_ID != "NA") %>% pull(Human_ID) %>% unique()
-# Shared direction (20 genes, 19 in human)
+# Shared direction (22 genes, 21 in human)
 carp_pow_mm_same <- sig_mm_bm %>% filter(Rat_ID %in% rat_carp_same_reg) %>% pull(Mouse_ID) %>% unique()
 carp_pow_rn_same <- rat_carp_same_reg
 carp_pow_hs_same <- sig_mm_bm %>% filter(Rat_ID %in% rat_carp_same_reg) %>% filter(Human_ID != "NA") %>% pull(Human_ID) %>% unique()
@@ -617,9 +618,9 @@ crave_mm <- c(carp_walk_mm, carp_pow_mm, walk_pow_mm) %>% unique() # 63
 crave_rn <- c(carp_walk_rn, carp_pow_rn, walk_pow_rn) %>% unique() # 75
 crave_hs <- c(carp_walk_hs, carp_pow_hs, walk_pow_hs) %>% unique() # 60
 # Same direction
-sd_crave_mm <- c(carp_walk_mm_same, carp_pow_mm_same, walk_pow_mm_same) %>% unique() # 33
+sd_crave_mm <- c(carp_walk_mm_same, carp_pow_mm_same, walk_pow_mm_same) %>% unique() # 34
 sd_crave_rn <- c(carp_walk_rn_same, carp_pow_rn_same, walk_pow_rn_same) %>% unique() # 34
-sd_crave_hs <- c(carp_walk_hs_same, carp_pow_hs_same, walk_pow_hs_same) %>% unique() # 31
+sd_crave_hs <- c(carp_walk_hs_same, carp_pow_hs_same, walk_pow_hs_same) %>% unique() # 33
 
 sd_crave_hs %>% sort()
 

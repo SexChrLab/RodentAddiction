@@ -10,7 +10,7 @@ library(tictoc)
 
 ## POWER ANALYSES ---------
 # Get list of all objects for each dataset
-setwd("C:/Annika/GitHub Repositories/RodentAddiction/results/power_objects/")
+setwd("C:/Annika/GitHub Repositories/RodentAddiction/post_processing/results/power_objects/")
 carpenter_obj <- readRDS(file = "carpenter_obj_4power.RDS")
 walker_obj <- readRDS(file = "walker_obj_4power.RDS")
 powell_obj <- readRDS(file = "powell_obj_4power.RDS")
@@ -71,51 +71,6 @@ as.vector(every_var$walker$disp) %>% mean()
 as.vector(every_var$walker$disp) %>% median()
 as.vector(every_var$powell$disp) %>% mean()
 as.vector(every_var$powell$disp) %>% median()
-
-
-# test200 <- ssizeRNA_vary(nGenes = as.vector(every_var$powell$nGenes), 
-#                          mu = as.vector(every_var$powell$mu), 
-#                          disp = as.vector(every_var$powell$disp), 
-#                          pi0 = 0.9, fc = 2, 
-#                          up = as.vector(every_var$powell$up),
-#                          m = 200,
-#                          fdr = 0.05, power = 0.8, maxN = 30)
-# 
-# as.vector(every_var$powell$actual_fc) %>% median()
-# 
-# test200 <- ssizeRNA_vary(nGenes = as.vector(every_var$walker$nGenes), 
-#                          mu = as.vector(every_var$walker$mu), 
-#                          disp = as.vector(every_var$walker$disp), 
-#                          pi0 = 0.9, fc = as.vector(every_var$walker$actual_fc), 
-#                          up = as.vector(every_var$walker$up),
-#                          m = 200,
-#                          fdr = 0.05, power = 0.8, maxN = 30)
-# test200 <- ssizeRNA_vary(nGenes = as.vector(every_var$carpenter$nGenes), 
-#                          mu = as.vector(every_var$carpenter$mu), 
-#                          disp = as.vector(every_var$carpenter$disp), 
-#                          pi0 = 0.9, fc = as.vector(every_var$carpenter$actual_fc), 
-#                          up = as.vector(every_var$carpenter$up),
-#                          m = 200,
-#                          fdr = 0.05, power = 0.8, maxN = 30)
-# 
-# as.vector(every_var$carpenter$actual_fc) %>% mean()
-# 
-# test30 <- ssizeRNA_vary(nGenes = as.vector(every_var$walker$nGenes), 
-#                          mu = as.vector(every_var$walker$mu), 
-#                          disp = as.vector(every_var$walker$disp), 
-#                          pi0 = 0.99, fc = 1.5, m = 5,
-#                          fdr = 0.05, power = 0.8, maxN = 30)
-# dev.off()
-# 
-# as.vector(every_var$walker$nGenes)
-# as.vector(every_var$walker$actual_fc) %>% length()
-# as.vector(every_var$walker$mu) %>% length()
-# as.vector(every_var$walker$disp) %>% length()
-# as.vector(every_var$walker$up)
-
-
-
-
 
 # Also get dataframe of variables
 get_vars <- every_var %>%
