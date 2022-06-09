@@ -22,7 +22,7 @@ library(clipr)
 
 ## BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
-main_dir <- "C:/Annika/GitHub Repositories/RodentAddiction/"
+main_dir <- "G:/Noctsol/GitHub Repositories/RodentAddiction/"
 de_dir <- paste0(main_dir, "post_processing/results/gene_info/")
 
 # Reduce chances of scientific notation
@@ -36,16 +36,16 @@ theme_set(new_theme)
 
 
 
-## GET NEWEST MARTS ----------
+## GET MARTS ----------
 # Mouse (GRCm39)
 grcm39 <- useEnsembl(biomart = "ensembl", dataset = "mmusculus_gene_ensembl",
-                     host = "https://dec2021.archive.ensembl.org")
+                     host = "https://apr2022.archive.ensembl.org")
 # Rat (mRatBN7.2)
 mRatBN7.2 <- useEnsembl("ensembl", dataset = "rnorvegicus_gene_ensembl", 
-                        host = "https://dec2021.archive.ensembl.org")
+                        host = "https://apr2022.archive.ensembl.org")
 # Human (GRCh38.p13)
 grch38 <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", 
-                     host = "https://dec2021.archive.ensembl.org")
+                     host = "https://apr2022.archive.ensembl.org")
 
 
 
@@ -184,102 +184,6 @@ sig_df_fc <- full_df %>% filter(P.Value < 0.05, abs(logFC) > log2(1.2))
 sig_df <- full_df %>% filter(P.Value < 0.05)
 
 
-## VOLCANO PLOTS ----------
-# How many DE genes for each study/comparison?
-sig_df_ponly %>% group_by(Study) %>% count()
-# Study         n
-# 1 Carpenter   633
-# 2 Powell      580
-# 3 Walker      139
-
-sig_df_fc %>% group_by(Study) %>% count()
-# Study         n
-# 1 Carpenter   136
-# 2 Powell      580
-# 3 Walker      109
-
-# Number of DE genes for each study, as variables
-carp_count <- sig_df %>% filter(Study == "Carpenter") %>% count() %>% pull(n)
-pow_count <- sig_df %>% filter(Study == "Powell") %>% count() %>% pull(n)
-walk_count <- sig_df %>% filter(Study == "Walker") %>% count() %>% pull(n)
-
-# How many DE genes for each study/comparison that are up or down-regulated?
-sig_df %>% mutate(Direction = ifelse(logFC > 0, "Up", "Down")) %>% group_by(Study, Direction) %>% count()
-# Study     Direction     n
-# 1 Carpenter Down        329
-# 2 Carpenter Up          304
-# 3 Powell    Down        291
-# 4 Powell    Up          289
-# 5 Walker    Down        100
-# 6 Walker    Up           39
-
-# Function for creating volcano plots
-volcano_plot <- function(df, study, rect_fill, x_lim = NULL, x_breaks = waiver(),
-                         y_lim = 5, x_color = "black", y_color = "black",  
-                         x_axis_lab = waiver()) {
-  
-  # Add labels to dataframe for significant genes
-  new_df <- df %>%
-    mutate(DE = fct_relevel(case_when((logFC > log2(1.2) & P.Value < 0.05 ~ "Up"),
-                                      (logFC < -log2(1.2) & P.Value < 0.05 ~ "Down"),
-                                      TRUE ~ "None"),
-                            levels = c("None", "Down", "Up")),
-           DE2 = fct_relevel(case_when((logFC < -log2(1.2) & adj.P.Val < 0.05 ~ "Down"),
-                                      TRUE ~ "None"),
-                            levels = c("None", "Down")),
-           Abs_logFC = abs(logFC),
-           Study = case_when(str_detect(Study, "Powell") ~ "Powell",
-                             str_detect(Study, "Walker") ~ "Walker",
-                             str_detect(Study, "Carpenter") ~ "Carpenter")) %>%
-    group_by(Study, DE) %>%
-    arrange(-Abs_logFC, .by_group = TRUE) %>%
-    mutate(DE_label = case_when(DE2 != "None" ~ Original_Gene_ID,
-                                TRUE ~ NA_character_))
-  
-  # Volcano plot w/ labels for top 10 up- and down-regulated genes
-  new_df %>%
-    filter(Study == study) %>%
-    ggplot(aes(x = logFC, y = -log10(P.Value), fill = DE, label = DE_label)) +
-    geom_point(alpha = 0.35, color = "black", shape = 21, 
-               size = 4, stroke = 1, show.legend = FALSE) +
-    # geom_vline(xintercept = c(-log2(1.2), log2(1.2)), col = "grey10", 
-    #            lty = "dashed", lwd = 1.25) + # log2FC threshold
-    geom_hline(yintercept = -log10(0.05), col = "grey10", 
-               lty = "dashed", lwd = 1.25) + # P-value threshold
-    geom_label_repel(color = "black", size = 3.5, show.legend = FALSE,
-                     min.segment.length = unit(0, "pt"), segment.size = 1,
-                     box.padding = unit(5, "pt")) +
-    scale_fill_manual(values = c("grey70", "#2EAECF", "#CA1A18")) +
-    scale_x_continuous(limits = x_lim, breaks = x_breaks, labels = x_axis_lab) +
-    scale_y_continuous(limits = c(0, y_lim), breaks = seq(0, 5, 1)) +
-    labs(x = expression("Log"[2]* " Fold Change"), 
-         y = expression("-Log"[10]* " P-Value")) +
-    theme(plot.title = element_text(hjust = 0.5),
-          panel.grid = element_blank(),
-          strip.background = element_rect(fill = c(rect_fill, "white")),
-          strip.text.x = element_text(size = 14),
-          axis.title.x = element_text(color = x_color),
-          axis.title.y = element_text(color = y_color)) +
-    facet_wrap(~ Study, nrow = 1)
-}
-
-vo1 <- volcano_plot(full_df, "Carpenter", "#44AA99", c(-1.5, 1.5), seq(-1.5, 1.5, 0.5), 4.2, "white", "black")
-vo2 <- volcano_plot(full_df, "Walker", "#C148AD", c(-2, 2), seq(-2, 2, 1), 5, "black", "white")
-vo3 <- volcano_plot(full_df, "Powell", "#DDCC77", c(-10, 4), seq(-10, 4, 2), 5.2)
-# 390, 420
-
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Carpenter_volcano_1_24_2022.svg", width = 4.25, height = 4.25)
-vo1
-# dev.off()
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Walker_volcano__1_24_2022.svg", width = 4.25, height = 4.25)
-vo2
-# dev.off()
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Powell_volcano__1_24_2022.svg", width = 4.25, height = 4.25)
-vo3
-# dev.off()
-
-
-
 ## GET SIGNIFICANT MOUSE GENES ----------
 # Get ENSEMBL IDs for significant mouse genes
 sig_mm_ids <- sig_df %>% 
@@ -363,8 +267,8 @@ mouse_hs_ids <- final_mouse_bm %>% filter(!is.na(Human_ID), Mouse_ID %in% mouse_
 mouse_rn_ids <- final_mouse_bm %>% filter(!is.na(Rat_ID), Mouse_ID %in% mouse_id_same_reg) %>% pull(Rat_ID) %>% unique()
 
 # How many unique rat and human genes?
-length(mouse_hs_ids) # 9
-length(mouse_rn_ids) # 11
+length(mouse_hs_ids) # 8
+length(mouse_rn_ids) # 9
 
 # Get vectors of shared Carpenter/Walker genes, w/ and w/o direction
 # All shared
@@ -410,9 +314,9 @@ sig_powell_mouse_hom_df <- sig_df %>%
 sig_powell_mouse_hom <- sig_powell_mouse_hom_df %>%
   pull(Mouse_ID) %>%
   unique()
-length(sig_powell_mouse_hom) # 548 genes
+length(sig_powell_mouse_hom) # 537 genes
 
-# How many mouse homologs up and downregulated? (268 + 280 = 548)
+# How many mouse homologs up and downregulated? (271 + 266 = 537)
 sig_powell_mouse_hom_df %>%
   mutate(Direction = case_when(logFC > 0 ~ "Up", logFC < 0 ~ "Down")) %>%
   dplyr::select(Mouse_ID, Direction) %>%
@@ -420,13 +324,13 @@ sig_powell_mouse_hom_df %>%
   group_by(Direction) %>%
   count()
 
-# How many rat genes? (534 genes)
+# How many rat genes? (532 genes)
 sig_powell_mouse_hom_df %>%
   dplyr::select(Original_Gene_ID) %>%
   unique() %>%
   count()
 
-# How many rat genes up and downregulated? (264 + 270 = 534 genes)
+# How many rat genes up and downregulated? (268 + 264 = 532 genes)
 sig_powell_mouse_hom_df %>%
   mutate(Direction = ifelse(logFC > 0, "Up", "Down")) %>%
   dplyr::select(Original_Gene_ID, Direction) %>%
@@ -592,7 +496,7 @@ walk_down <- walk_only %>% filter(Direction == "Down") %>% pull(Original_Gene_ID
 carp_pow_mm <- carp_pow_shared_mouse
 carp_pow_rn <- sig_mm_bm %>% filter(Mouse_ID %in% carp_pow_shared_mouse, Rat_ID %in% carp_pow_shared_rat) %>% pull(Rat_ID) %>% unique()
 carp_pow_hs <- sig_mm_bm %>% filter(Mouse_ID %in% carp_pow_shared_mouse) %>% filter(Human_ID != "NA") %>% pull(Human_ID) %>% unique()
-# Shared direction (22 genes, 21 in human)
+# Shared direction (21 genes, 21 in human)
 carp_pow_mm_same <- sig_mm_bm %>% filter(Rat_ID %in% rat_carp_same_reg) %>% pull(Mouse_ID) %>% unique()
 carp_pow_rn_same <- rat_carp_same_reg
 carp_pow_hs_same <- sig_mm_bm %>% filter(Rat_ID %in% rat_carp_same_reg) %>% filter(Human_ID != "NA") %>% pull(Human_ID) %>% unique()
@@ -608,36 +512,36 @@ walk_pow_rn_same <- rat_walk_same_reg
 walk_pow_hs_same <- sig_mm_bm %>% filter(Rat_ID %in% rat_walk_same_reg) %>% pull(Human_ID) %>% unique()
 
 # Consolidate vectors
-# All Craving
-crave_mm <- c(carp_walk_mm, carp_pow_mm, walk_pow_mm) %>% unique() # 63
-crave_rn <- c(carp_walk_rn, carp_pow_rn, walk_pow_rn) %>% unique() # 75
-crave_hs <- c(carp_walk_hs, carp_pow_hs, walk_pow_hs) %>% unique() # 60
+# All Candidate
+cand_mm <- c(carp_walk_mm, carp_pow_mm, walk_pow_mm) %>% unique() # 63
+cand_rn <- c(carp_walk_rn, carp_pow_rn, walk_pow_rn) %>% unique() # 70
+cand_hs <- c(carp_walk_hs, carp_pow_hs, walk_pow_hs) %>% unique() # 63
 # Same direction
-sd_crave_mm <- c(carp_walk_mm_same, carp_pow_mm_same, walk_pow_mm_same) %>% unique() # 34
-sd_crave_rn <- c(carp_walk_rn_same, carp_pow_rn_same, walk_pow_rn_same) %>% unique() # 35
-sd_crave_hs <- c(carp_walk_hs_same, carp_pow_hs_same, walk_pow_hs_same) %>% unique() # 33
+sd_cand_mm <- c(carp_walk_mm_same, carp_pow_mm_same, walk_pow_mm_same) %>% unique() # 34
+sd_cand_rn <- c(carp_walk_rn_same, carp_pow_rn_same, walk_pow_rn_same) %>% unique() # 33
+sd_cand_hs <- c(carp_walk_hs_same, carp_pow_hs_same, walk_pow_hs_same) %>% unique() # 32
 
-sd_crave_hs %>% sort()
+sd_cand_hs %>% sort()
 
 
 # All in one list
-all_genes_list <- list(carp_pow_mm, carp_pow_rn, carp_pow_hs, carp_pow_mm_same, 
+all_overlaps_list <- list(carp_pow_mm, carp_pow_rn, carp_pow_hs, carp_pow_mm_same, 
                        carp_pow_rn_same, carp_pow_hs_same, walk_pow_mm, 
                        walk_pow_rn, walk_pow_hs, walk_pow_mm_same, 
                        walk_pow_rn_same, walk_pow_hs_same, carp_walk_mm, 
                        carp_walk_rn, carp_walk_hs, carp_walk_mm_same, 
-                       carp_walk_rn_same, carp_walk_hs_same, crave_mm, crave_rn, 
-                       crave_hs, sd_crave_mm, sd_crave_rn, sd_crave_hs) %>%
+                       carp_walk_rn_same, carp_walk_hs_same, cand_mm, cand_rn, 
+                       cand_hs, sd_cand_mm, sd_cand_rn, sd_cand_hs) %>%
   setNames(c("carp_pow_mm", "carp_pow_rn", "carp_pow_hs", "carp_pow_mm_same", 
              "carp_pow_rn_same", "carp_pow_hs_same", "walk_pow_mm",
              "walk_pow_rn", "walk_pow_hs", "walk_pow_mm_same", 
              "walk_pow_rn_same",  "walk_pow_hs_same", "carp_walk_mm", 
              "carp_walk_rn", "carp_walk_hs", "carp_walk_mm_same", 
-             "carp_walk_rn_same", "carp_walk_hs_same", "crave_mm", "crave_rn", 
-             "crave_hs", "sd_crave_mm", "sd_crave_rn", "sd_crave_hs"))
+             "carp_walk_rn_same", "carp_walk_hs_same", "cand_mm", "cand_rn", 
+             "cand_hs", "sd_cand_mm", "sd_cand_rn", "sd_cand_hs"))
 
 # Save big list as an R object
-saveRDS(all_genes_list, file = paste0(main_dir, "post_processing/results/other/all_genes_list.RDS"))
+saveRDS(all_overlaps_list, file = paste0(main_dir, "post_processing/results/other/all_overlaps_list.RDS"))
 
 
 

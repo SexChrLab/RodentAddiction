@@ -27,7 +27,7 @@ library(clipr)
 
 ## BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
-main_dir <- "C:/Annika/Github Repositories/RodentAddiction/"
+main_dir <- "G:/Noctsol/Github Repositories/RodentAddiction/"
 de_dir <- paste0(main_dir, "post_processing/results/gene_info/")
 gtex_dir <- paste0(main_dir, "post_processing/downloaded_data/gtex/")
 
@@ -41,10 +41,13 @@ new_theme <- theme_bw(base_size = 14) %+replace%
 theme_set(new_theme)
 
 
-
-## LOAD IN GENE LISTS ----------
+## LOAD IN GENE LISTS AND CONSERVATION ANALYSIS ----------
 # All in one list
 all_genes_list <- readRDS(file = paste0(main_dir, "post_processing/results/other/all_genes_list.RDS"))
+
+# Conservation analysis
+# This is only necessary to load in for creating a combined dataframe with expression data
+full_cons_df <- readRDS(file = paste0(main_dir, "post_processing/results/other/full_cons_df.RDS"))
 
 # Separate list into multiple objects
 list2env(all_genes_list, envir = .GlobalEnv)
@@ -145,12 +148,8 @@ gtex_all_medians <- gtex_prep(all_tissue_list, "median", "Median_TPM")
 gtex_all <- full_join(gtex_all_means, gtex_all_medians) %>%
   mutate(Human_ID = sub("\\.[0-9]+", "", Human_ID))
 
-# Mark experimental and GWAS genes based on Human_ID
-gtex <- gtex_all %>%
-  mutate(Gene_Group = fct_relevel(
-    case_when(Human_ID %in% sd_crave_hs ~ "Craving",
-              TRUE ~ "All Other Genes"),
-    c("Craving", "All Other Genes"))) %>%
+# Get temporary dataframe without Gene_Group labeled
+gtex_temp <- gtex_all %>%
   mutate(System = factor(case_when(Tissue == "BRN-CB-b" ~ NA_character_,
                                    Tissue == "BRN-CTX-b" ~ NA_character_,
                                    # Remove brain replicates from this &
@@ -166,13 +165,33 @@ gtex <- gtex_all %>%
   mutate(System_Total = sum(Mean_TPM), .after = "System") %>%
   ungroup()
 
-# How many craving genes in GTEX data? (32)
+# Get separate dataframes for each dataset and then join
+carp_gtex <- gtex_temp %>%
+  filter(Human_ID %in% sig_carp_hs_ids) %>%
+  mutate(Gene_Group = "Carpenter")
+walk_gtex <- gtex_temp %>%
+  filter(Human_ID %in% sig_walk_hs_ids) %>%
+  mutate(Gene_Group = "Walker")
+pow_gtex <- gtex_temp %>%
+  filter(Human_ID %in% sig_pow_hs_ids) %>%
+  mutate(Gene_Group = "Powell")
+
+# Join for supplementary material
+gtex <- Reduce(function(x, y) 
+  full_join(x, y), list(carp_gtex, walk_gtex, pow_gtex, gtex_temp)) %>%
+  mutate(Gene_Group = fct_relevel(ifelse(is.na(Gene_Group), 
+                                         "All Other Genes", Gene_Group),
+                                  levels = c("Carpenter", "Walker", "Powell", "All Other Genes"))) %>%
+  relocate(Gene_Group, .before = everything()) %>%
+  unique()
+
+# How many genes in GTEX data?
 gtex %>% 
   group_by(Gene_Group) %>% 
   dplyr::select(Human_ID) %>% 
   unique() %>%
   count()
-
+# C: 577, W: 112, P: 524, Other: 55048
 
 
 ## LOAD IN GTEX METADATA ----------
@@ -342,88 +361,145 @@ final_bysex_tpm <- tpm %>%
     TRUE ~ Tissue))
 
 
-
 ## SEX/TISSUE ANOVAS FOR INDIVIDUAL GENES ----------
+all_hs_ids <- c(sig_carp_hs_ids, sig_walk_hs_ids, sig_pow_hs_ids)
+
 # Overall ANOVAs
-bysex_tissue_anovas <- final_bysex_tpm %>%
+bysex_tissue_anovas_temp <- final_bysex_tpm %>%
   filter(Tissue != "Cerebellum", Tissue != "Cortex", 
-         Human_ID %in% sd_crave_hs) %>%
+         Human_ID %in% all_hs_ids) %>%
+  unique() %>%
   group_by(Human_Symbol) %>%
   anova_test(TPM ~ Sex + Tissue + Sex:Tissue, type = "III") %>%
   as.data.frame() %>%
   dplyr::rename(Sig_p05 = "p<.05")
 
+bysex_tissue_anovas <- gtex %>%
+  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., bysex_tissue_anovas_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
+
 # Genes with main effects or interactions
 genes_sex <- bysex_tissue_anovas %>% 
   filter(Effect == "Sex", Sig_p05 == "*") %>% 
-  pull(Human_Symbol)
-# [1] "AMZ1"    "B2M"     "NTS"     "PITPNM3" "USP46"  
+  pull(Human_Symbol) %>%
+  unique()
+# 281 genes
+
 genes_tissue <- bysex_tissue_anovas %>% 
   filter(Effect == "Tissue", Sig_p05 == "*") %>% 
-  pull(Human_Symbol)
-# [1] "AGK"     "AMZ1"    "B2M"     "BCAS1"   "BTG1"    "CACYBP"  "CARTPT"  "CCDC88C"
-# [9] "CELF6"   "EGR2"    "FABP7"   "FKBP4"   "FTH1"    "GPD1"    "GUCY1A3" "HAPLN2" 
-# [17] "HSPA8"   "IRS2"    "KIF5A"   "LYPD1"   "MBP"     "MOBP"    "NTS"     "PHLDA1" 
-# [25] "PITPNM3" "RGS5"    "RPS6KA2" "SOX17"   "TIPARP"  "TTLL1"   "USP46"   "VIM"    
+  pull(Human_Symbol) %>%
+  unique()
+# 1148 genes
+
 genes_inter <- bysex_tissue_anovas %>% 
   filter(Effect == "Sex:Tissue", Sig_p05 == "*") %>% 
-  pull(Human_Symbol)
-# [1] "CARTPT"  "CELF6"   "HAPLN2"  "NTS"     "RPS6KA2"
+  pull(Human_Symbol) %>%
+  unique()
+# 88 genes
 
 # SEX EFFECT:
 # No need for post-hoc tests for Sex (only 2 groups)
 # Can still determine which sex has higher expression
 
-# Genes with higher expression in females (just B2M)
+# Genes with higher expression in females
 female_higher <- final_bysex_tpm %>%
   filter(Human_Symbol %in% genes_sex) %>%
+  unique() %>%
   group_by(Human_Symbol, Sex) %>%
   summarize(Mean_TPM = mean(TPM))%>%
   pivot_wider(names_from = Sex, values_from = Mean_TPM) %>%
   mutate(Higher_Sex = case_when(Female > Male ~ "Female", 
                                 Male > Female ~ "Male")) %>%
   filter(Higher_Sex == "Female") %>%
-  pull(Human_Symbol)
-
+  pull(Human_Symbol) %>%
+  unique()
+# 47 of 281
 
 # Use that vector of genes to label a summary dataframe
-sex_summary <- final_bysex_tpm %>%
+sex_summary_temp <- final_bysex_tpm %>%
   filter(Human_Symbol %in% genes_sex) %>%
+  unique() %>%
   group_by(Human_Symbol, Sex) %>%
   summarize(Mean_TPM = mean(TPM), SD_TPM = sd(TPM)) %>%
   mutate(Higher_Sex = case_when(Human_Symbol %in% female_higher ~ "Female",
-                                TRUE ~ "Male"))
+                                TRUE ~ "Male")) %>%
+  pivot_wider(names_from = Sex, values_from = c(Mean_TPM, SD_TPM))
+
+sex_summary <- gtex %>%
+  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., sex_summary_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
 
 # TISSUE EFFECT:
 # Post-hoc Tukey tests for each gene with significant main effect of Tissue
-tukey_tissue <- final_bysex_tpm %>%
+tukey_tissue_temp <- final_bysex_tpm %>%
   filter(Tissue != "Cerebellum", Tissue != "Cortex") %>%
   mutate(Tissue = gsub("-", "_", Tissue)) %>%
   filter(Human_Symbol %in% genes_tissue | Human_Symbol %in% genes_inter) %>%
+  unique() %>%
   group_by(Human_Symbol) %>%
   tukey_hsd(TPM ~ Tissue) %>%
+  relocate(Human_Symbol, .before = term) %>%
   as.data.frame()
+
+# Get human IDs and symbols together in a dataframe
+hs_sym_ids <- final_bysex_tpm %>% dplyr::select(Human_Symbol, Human_ID)
+
+tukey_tissue <- gtex %>%
+  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., tukey_tissue_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
 
 # SEX:TISSUE INTERACTION
 # Post-hoc Tukey tests for each gene with significant Sex:Tissue interaction
-tukey_sex_tissue <- final_bysex_tpm %>%
+tukey_sex_tissue_temp <- final_bysex_tpm %>%
   filter(Tissue != "Cerebellum", Tissue != "Cortex") %>%
   mutate(Tissue = gsub("-", "_", Tissue)) %>%
   filter(Human_Symbol %in% genes_inter) %>%
+  unique() %>%
   group_by(Human_Symbol, Tissue) %>%
   tukey_hsd(TPM ~ Sex) %>%
+  relocate(Human_Symbol, .before = everything()) %>%
   as.data.frame()
+
+tukey_sex_tissue <- gtex %>%
+  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., tukey_sex_tissue_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
 
 # Load specific packages
 library(emmeans)
 library(multcomp)
 
+# Use vector of genes to label a summary dataframe
+sex_tissue_summary <- final_bysex_tpm %>%
+  filter(Human_Symbol %in% genes_inter) %>%
+  unique() %>%
+  mutate(Tissue = gsub("-", "_", Tissue)) %>%
+  group_by(Human_Symbol, Tissue, Sex) %>%
+  summarize(Mean_TPM = mean(TPM), SD_TPM = sd(TPM)) %>%
+  mutate(Higher_Sex = case_when(Human_Symbol %in% female_higher ~ "Female",
+                                TRUE ~ "Male")) %>%
+  pivot_wider(names_from = Sex, values_from = c(Mean_TPM, SD_TPM)) %>%
+  full_join(tukey_sex_tissue) %>%
+  filter(p.adj.signif != "ns") %>%
+  droplevels() %>%
+  relocate(Gene_Group, Human_ID, .before = everything()) %>%
+  dplyr::select(1:9)
+
+# CLDs FOR TISSUE EFFECT
 # Get compact letter display (CLD) for tissue data
 # First create function
 get_cld <- function(gene) {
   final_bysex_tpm %>%
     filter(Human_Symbol == gene,
            Tissue != "Cerebellum", Tissue != "Cortex") %>%
+    unique() %>%
     mutate(Tissue = as.factor(Tissue)) %>%
     lm(TPM ~ Tissue, data = .) %>%
     emmeans(., pairwise ~ "Tissue", adjust = "tukey") %>%
@@ -442,7 +518,7 @@ for (i in 1:length(genes_tissue)) {
 }
 
 # Convert list to dataframe
-cld_df <- Reduce(function(x, y) 
+cld_df_temp <- Reduce(function(x, y) 
   full_join(x, y), cld_list) %>%
   mutate(Group = str_trim(.group), .keep = "unused") %>%
   mutate(Group = gsub("1", "a", Group),
@@ -452,7 +528,14 @@ cld_df <- Reduce(function(x, y)
          Group = gsub("5", "e", Group),
          Group = gsub("6", "f", Group),
          Group = gsub("7", "g", Group),
-         Group = gsub("8", "h", Group))
+         Group = gsub("8", "h", Group),
+         Group = gsub("9", "i", Group))
+
+cld_df <- gtex %>%
+  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., cld_df_temp, by = c("Human_Symbol" = "Human_Gene_Symbol")) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
 
 # Unload packages that don't play nicely with tidyverse
 detach("package:multcomp", unload = TRUE)
@@ -482,13 +565,17 @@ filter_genes <- brain_spec %>% pull(Human_ID) %>% unique()
 # Count genes before and after filtering
 # All genes
 brain_spec_firstpass %>% group_by(Human_ID) %>% count() %>% nrow() # 56,200
-brain_spec %>% nrow() # 55,873 genes after
+brain_spec %>% group_by(Human_ID) %>% count() %>% nrow() # 55,873 genes after
 # "All Other Genes"
 brain_spec_firstpass %>% filter(Gene_Group == "All Other Genes") %>% 
-  group_by(Human_ID) %>% count() %>% nrow() # 56,184 before
-brain_spec %>% filter(Gene_Group == "All Other Genes") %>% nrow() # 55,857 genes
-# CE, CW, and GWAS genes after
-brain_spec %>% filter(Gene_Group == "Craving") %>% nrow() # 16/16 Craving genes after
+  group_by(Human_ID) %>% count() %>% nrow() # 55,048 before
+brain_spec %>% filter(Gene_Group == "All Other Genes") %>% 
+  group_by(Human_ID) %>% count() %>% nrow() # 54,721 after
+# Candidate genes
+brain_spec_firstpass %>% filter(Gene_Group != "All Other Genes") %>% 
+  group_by(Human_ID) %>% count() %>% nrow() # 1,152 before
+brain_spec %>% filter(Gene_Group != "All Other Genes") %>% 
+  group_by(Human_ID) %>% count() %>% nrow() # 1,152 after
 
 # Calculate "Within-Brain Percentage":
 # Mean TPM for a gene in a CNS tissue vs. that gene's CNS Total
@@ -510,7 +597,7 @@ gtex_spec <- Reduce(full_join, list(gtex, brain_spec_firstpass, wnbrain_perc)) %
   filter(Human_ID %in% filter_genes)
 
 cns_means <- gtex_spec %>% 
-  filter(System == "CNS", Gene_Group == "Craving") %>%
+  filter(System == "CNS", Gene_Group != "All Other Genes") %>%
   dplyr::select(Human_ID, Human_Symbol, Tissue, Mean_TPM, Median_TPM) %>%
   group_by(Human_ID) %>%
   mutate(CNS_Mean = mean(Mean_TPM)) %>%
@@ -518,15 +605,22 @@ cns_means <- gtex_spec %>%
   arrange(Human_Symbol) %>%
   unique()
 
+### PLOT ----------
 # Genes to label
-label_list <- c("MOBP",
-                "FAM53B", "C1QL2", "DRD3", "CREB1", "NR4A1")
+shared_label_list <- c("MOBP")
+general_label_list <- c("GAD2",
+                        "GPR101", "PRKCG",
+                        "OPALIN",
+                        "FAM53B", "C1QL2", "CREB1")
 
 # All overlaps in ggrepel
 options(ggrepel.max.overlaps = Inf)
 
-# Brain specificity plot
 bs_plot <- brain_spec %>%
+  mutate(Gene_Group = as.character(Gene_Group),
+         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other Genes" ~ "Other",
+                                            TRUE ~ Gene_Group),
+                                  levels = c("Carpenter", "Walker", "Powell", "Other"))) %>%
   dplyr::select(Human_ID, Human_Symbol, BrainSpec, Gene_Group) %>%
   unique() %>%
   filter(BrainSpec != -Inf, BrainSpec != Inf) %>%
@@ -539,55 +633,47 @@ bs_plot <- brain_spec %>%
   geom_violin(width = 0.8) +  
   geom_boxplot(fill = "white", color = "black", width = 0.18, 
                outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
-               outlier.fill = "black", outlier.alpha = 0.9) +
+               outlier.fill = "black", outlier.alpha = 0.6) +
   labs(x = "", y = expression("Brain Specificity (Log "[2]*" Fold Change)"),
-       title = "Specificity of Craving Genes to the Brain (GTEx)\n") +
+       title = "Brain Specificity (GTEx)\n") +
   scale_y_continuous(limits = c(-16, 12), breaks = seq(-16, 12, 4), 
                      expand = c(0, 0.00001)) +
   scale_x_discrete(expand = c(0, 0.55)) +
-  scale_fill_manual(values = c("#DE8971", "grey80")) +
+  scale_fill_manual(values = c("#44AA99", "#C148AD", "#DDCC77", "grey60")) +
   theme(legend.position = "none", axis.ticks.x = element_blank(), 
         panel.grid = element_blank(),
         axis.text = element_text(size = 13),
         axis.title = element_text(size = 14),
-        plot.title = element_blank()) +
+        plot.title = element_text(face = "bold"),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black")) +
   geom_label_repel(data = . %>%
-                     mutate(label = ifelse(Human_Symbol %in% label_list, 
+                     mutate(label = ifelse(Human_Symbol %in% shared_label_list, 
+                                           Human_Symbol, NA_character_)),
+                   aes(label = label), color = "black", fill = "white",
+                   nudge_y = 0.01, nudge_x = 0.01,
+                   box.padding = 0.5, fontface = "bold", size = 3, seed = 68) +
+  geom_label_repel(data = . %>%
+                     mutate(label = ifelse(Human_Symbol %in% general_label_list, 
                                            Human_Symbol, NA_character_)),
                    aes(label = label), color = "black",
-                   box.padding = 0.8, fontface = "bold", size = 3.5) +
-  stat_compare_means(comparisons = list(c("Craving", "All Other Genes")), method = "wilcox.test", 
-                     hide.ns = FALSE, label.y = c(9.3), tip.length = c(0, 0.05))
+                   box.padding = 0.5, fontface = "bold", size = 3, seed = 454)
+
 
 # Save as pdf
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_1_24_2022.svg", width = 4, height = 5.5)
+# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_5_31_2022.svg", width = 4.5, height = 5.5)
 bs_plot
 # dev.off()
 
-# One-sample Wilcoxon tests
-# Function
-one_sample_wilcox <- function(group) {
-  gtex_spec %>%
-    dplyr::select(Human_ID, System, BrainSpec, Gene_Group) %>%
-    unique() %>%
-    filter(System == "CNS", Gene_Group == group,
-           BrainSpec != -Inf, BrainSpec != Inf) %>%
-    wilcox_test(BrainSpec ~ 1, mu = 0)
-}
-
-# Are craving genes highly expressed in the brain?
-one_sample_wilcox("Craving")
-one_sample_wilcox("All Other Genes")
-
+### STATISTICS ----------
 # Wilcoxon test between groups
 # Are craving genes more specific to the brain than other genes?
 gtex_spec %>%
   dplyr::select(Human_ID, System, BrainSpec, Gene_Group) %>%
   unique() %>%
   filter(System == "CNS", BrainSpec != -Inf, BrainSpec != Inf) %>%
-  wilcox_test(BrainSpec ~ Gene_Group)
-# .y.       group1  group2             n1    n2 statistic        p
-# 1 BrainSpec Craving All Other Genes    32 55305   1233008 0.000116
+  wilcox_test(BrainSpec ~ Gene_Group) %>%
+  filter(group2 == "All Other Genes")
 
 # Summary data for brain specificity by gene group
 summary_brainspec <- gtex_spec %>%
@@ -595,288 +681,69 @@ summary_brainspec <- gtex_spec %>%
   unique() %>%
   filter(System == "CNS", BrainSpec != -Inf, BrainSpec != Inf) %>%
   group_by(Gene_Group) %>%
-  summarize(Mean_BrainSpec = mean(BrainSpec), 
-            Median_BrainSpec = median(BrainSpec))
+  summarize(Median_BrainSpec = median(BrainSpec))
 summary_brainspec
 
-# This can be sorted to look for interesting targets
-crav_gtex_info <- gtex_spec %>%
-  filter(System == "CNS", Gene_Group == "Craving") %>%
-  dplyr::select(Human_ID, Human_Symbol, Tissue, BrainSpec, WithinBrain_Perc) %>%
-  unique()
 
-# 11 genes have higher expression in brain than the rest of the body
-crav_gtex_info %>% 
-  dplyr::select(-c(Tissue, WithinBrain_Perc)) %>%
-  filter(BrainSpec > 0) %>%
+## FINAL DATAFRAME (Need to run conservation script first) ----------
+# Get CNS means
+cns_means_df <- gtex %>%
+  filter(!is.na(System)) %>%
+  group_by(Human_ID, System) %>%
+  mutate(System_Mean = mean(Mean_TPM)) %>%
+  dplyr::select(Human_ID, Human_Symbol, System, System_Total,
+                System_Mean, Gene_Group) %>%
   unique() %>%
-  arrange(desc(BrainSpec)) %>%
-  pull(Human_Symbol)
-# [1] "MOBP"   "KIF5A"  "MBP"    "HAPLN2" "BCAS1"  "FABP7" 
-# [7] "LYPD1"  "CARTPT" "AMZ1"   "NTS"
+  pivot_wider(names_from = System, values_from = System_Mean) %>%
+  dplyr::select(-Body) %>%
+  rename(CNS_Mean = CNS) %>%
+  filter(!is.na(CNS_Mean)) %>%
+  ungroup()
 
-# Rank brain tissues by highest expression
-rank_brain <- gtex_spec %>% 
-  group_by(Human_ID) %>%
-  filter(System == "CNS") %>%
-  mutate(Rank = dense_rank(dplyr::desc(WithinBrain_Perc)), .before = Tissue) %>%
-  dplyr::select(Human_ID, Human_Symbol, BrainSpec, Rank, Tissue, WithinBrain_Perc,
-                Mean_TPM, Gene_Group)
+# Get regions of highest expression
+temp_df <- cld_df %>%
+  dplyr::select(Human_Symbol, Tissue, Group) %>%
+  filter(grepl("a", Group)) %>%
+  pivot_wider(names_from = Tissue, values_from = Group)
 
-# Short tables w/ top 5 regions for publication
-# Function
-wnbrain_table <- function(group) {
-  rank_brain %>%
-    filter(Gene_Group == group, Rank <= 5) %>%
-    dplyr::select(-Gene_Group) %>%
-    arrange(Human_Symbol, Rank)
+for (cl in names(test)[2:ncol(temp_df)]) {
+  set(temp_df, j = cl, value = fifelse(temp_df[[cl]]==0, NA_character_, cl))
 }
 
-# Create table
-rank_crave_tbl <- wnbrain_table("Craving")
-
-# Get list only for craving genes
-rank_crave <- rank_brain %>% filter(Gene_Group == "Craving")
-
-# Get genes with high expression (>= 10% of brain expression) in reward Systems
-reward_rank <- rank_crave %>%
-  dplyr::select(-Gene_Group) %>%
-  filter(WithinBrain_Perc >= 0.10) %>%
-  filter(!Tissue %in% c("BRN-CB-a", "BRN-HYP", "BRN-SPC", "BRN-PTRY")) %>%
-  arrange(Human_Symbol, Rank)
-
-
-
-## COPY DATA INTO SPREADSHEETS ----------
-write_clip(cld_df)
-
-tukey_sex_tissue %>%
-  relocate(Human_Symbol, .before = everything()) %>%
-  write_clip()
-
-tukey_tissue %>% write_clip()
-
-rank_crave %>%
-  relocate(Human_Symbol, .before = everything()) %>%
-  dplyr::select(1:3) %>%
+highest_region_df <- cld_df %>%
+  dplyr::select(Human_Symbol) %>%
   unique() %>%
-  arrange(Human_Symbol) %>%
-  write_clip()
+  mutate(Highest_CNS_Regions = "")
 
-bysex_tissue_anovas %>% write_clip()
+for (i in 1:nrow(temp_df)) {
+  highest_region_df[i, 2] <- temp_df %>%
+    .[i, ] %>%
+    .[ , apply(., 2, function(x) !any(is.na(x)))] %>%
+    unite("Highest_CNS_Regions", 2:ncol(.), remove = TRUE, sep = ", ") %>%
+    dplyr::select(2)
+}
 
+# Load conservation data
+full_cons_df <- readRDS(file = paste0(main_dir, "post_processing/results/other/full_cons_df.RDS"))
+
+# Final dataframe with everything
+final_df <- full_join(brain_spec, cns_means_df) %>%
+  mutate(Gene_Group = as.factor(ifelse(Gene_Group == "All Other Genes", 
+                                       "All Other Homologs", 
+                                       as.character(Gene_Group)))) %>%
+  filter(Gene_Group != "All Other Homologs") %>%
+  full_join(., highest_region_df) %>%
+  full_join(full_cons_df, .) %>%
+  filter(Gene_Group != "All Other Homologs") %>%
+  dplyr::select(1:18, 23, 25:26)
+# 1424 * 21 dimensions
+
+saveRDS(final_df, file = paste0(main_dir, "post_processing/results/other/final_df.RDS"))
 
 ## MAKE GTEX PLOTS ----------
-# Function for creating a 2-panel plot with by-system and by-sex data for a
-# single gene
-
-
-# Plot means by tissue for specific genes (all samples)
-
-
-horiz_gene_plot <- function(gene, high_limit, break_unit, rect = "#DE8971",
-                      adjust = 0) {
-  # Create labeller for plots
-  gene_label <- c("All Samples")
-  names(gene_label) <- c(gene)
-  
-  gtex_spec %>%
-    mutate(System = fct_rev(case_when(
-      Tissue == "BRN-CB-b" | Tissue == "BRN-CTX-b" ~ "CNS",
-      Tissue == "CELL-FB" | Tissue == "CELL-LYM" ~ "Body",
-      TRUE ~ as.character(System)))) %>%
-    filter(Human_Symbol == gene) %>%
-    ggplot(aes(x = Tissue, fill = System, color = System)) +
-    geom_point(aes(y = Mean_TPM), shape = 21, size = 5, color = "black",
-               alpha = 0.6) +
-    geom_point(aes(y = Median_TPM), shape = 4, stroke = 1.5, size = 5) +
-    scale_y_continuous(limits = c(0, high_limit),
-                       breaks = seq(0, high_limit, break_unit)) +
-    scale_fill_manual(values = c("#44AA99", "#332288")) +
-    scale_color_manual(values = c("#44AA99", "#332288")) +
-    labs(x = "", y = "Mean/Median TPM", fill = "System") +
-    theme(legend.title.align = 0.5, legend.position = "bottom",
-          legend.margin = margin(-1.25, 0, 0, 0, "cm"),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.y = element_blank(),
-          panel.grid.major.y = element_line(color = "grey70"),
-          axis.text.x = element_text(size = 10, angle = 45, hjust = 1),
-          plot.margin = margin(0.25, 0.25, 0.75, 0.25, "cm"),
-          strip.background = element_rect(fill = rect)) +
-    facet_wrap(~ Human_Symbol, labeller = labeller(Human_Symbol = gene_label))
-}
-
-sex_plot <- function(gene, high_limit, break_unit, rect = "#DE8971",
-                            adjust = 0, pos = high_limit-0.5*break_unit) {
-  
-  # Compact letter display
-  cld_info <- cld_df %>% 
-    filter(Human_Gene_Symbol == gene) %>% 
-    dplyr::select(Tissue, Group)
-  
-  # Plot means by tissue for specific genes (by sex)
-  final_bysex_tpm %>%
-    filter(Human_Symbol == gene, Tissue != "Cerebellum", Tissue != "Cortex") %>%
-    ggplot(aes(x = Tissue)) +
-    stat_boxplot(aes(y = TPM, fill = Sex), geom = "errorbar", size = 1, color = "grey10",
-                 position = position_dodge(width = 0.8), width = 0.6) +
-    geom_boxplot(aes(y = TPM, fill = Sex), color = "grey10", outlier.color = "black", outlier.alpha = 0.8,
-                 outlier.shape = 21, outlier.size = 3.75, width = 0.8,
-                 position = position_dodge(width = 0.8)) +
-    stat_summary(aes(y = TPM, fill = Sex), fun.data = "mean_se", geom = "point", shape = 4, stroke = 1.5, 
-                 position = position_dodge(width = 0.8)) +
-    labs(x = "") +
-    scale_fill_manual(values = c("#CC6677", "#88CCEE")) +
-    scale_y_continuous(limits = c(-0.1, high_limit), 
-                       breaks = seq(0, high_limit, break_unit)) +
-    theme(legend.title.align = 0.5, legend.position = "bottom",
-          legend.margin = margin(-0.75, 0, 0, 0, "cm"),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.y = element_blank(),
-          panel.grid.major.y = element_line(color = "grey70"),
-          axis.text.x = element_text(size = 11),
-          axis.ticks.x = element_blank(),
-          plot.margin = margin(0.25, 0.25, 0.75, 0.25, "cm"),
-          strip.background = element_rect(fill = rect),
-          legend.text = element_text(size = 14),
-          legend.key.size = unit(1.5, "cm"),
-          strip.text.x = element_text(size = 14)) +
-    facet_wrap(~ Human_Symbol) +
-    geom_text(data = cld_info, aes(x = Tissue, y = pos, label = Group), size = 5)
-}
-# 1200, 425 is 4 per page
-
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/AGK_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("AGK", 60, 10, pos = c(38, 23, 26, 55, 38, 28, 35, 28, 33, 25, 26, 28))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/AMZ1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("AMZ1", 8, 2, pos = c(5, 7, 5.7, 3.2, 7.5, 5, 5.5, 7.2, 5, 5.5, 5, 3.6))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/B2M_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("B2M", 8200, 1000, pos = c(6700, 8200, 1500, 1600, 5300, 5300, 7300, 5400, 2700, 1300, 1600, 2400))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/BCAS1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("BCAS1", 2100, 400, pos = c(900, 950, 500, 320, 1500, 900, 950, 1050, 200, 1300, 1100, 2100))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/BTG1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("BTG1", 565, 50, pos = c(185, 230, 70, 335, 85, 145, 170, 120, 230, 70, 70, 255))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CACYBP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("CACYBP", 565, 50, pos = c(220, 185, 240, 435, 270, 180, 220, 420, 380, 150, 140, 250))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CARTPT_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("CARTPT", 5150, 1000, pos = c(400, 600, 400, 400, 700, 500, 5150, 800, 600, 400, 400, 500))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CCDC88C_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("CCDC88C", 50, 10, pos = c(15, 19, 42, 6, 8, 15, 17, 49, 25, 35, 6, 12))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/CELF6_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("CELF6", 120, 20, pos = c(45, 30, 25, 65, 43, 35, 101, 105, 117, 25, 38, 35))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/EGR2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("EGR2", 205, 20, pos = c(30, 35, 55, 65, 28, 50, 37, 42, 205, 46, 26, 50))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/FABP7_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("FABP7", 265, 50, pos = c(130, 90, 80, 220, 90, 85, 265, 85, 50, 45, 55, 94))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/FKBP4_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("FKBP4", 600, 100, pos = c(240, 190, 320, 560, 380, 220, 240, 430, 530, 280, 190, 350))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/FTH1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("FTH1", 5200, 1000, pos = c(3800, 3300, 2400, 1500, 4600, 3500, 3000, 3300, 5200, 4000, 2900, 5200))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/GPD1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("GPD1", 375, 40, pos = c(50, 55, 30, 45, 30, 85, 85, 45, 35, 65, 85, 375))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/GUCY1A3_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("GUCY1A3", 35, 5, pos = c(15, 14, 24, 7, 16, 9, 15, 34.5, 30, 24, 8, 24))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/HAPLN2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("HAPLN2", 2400, 400, pos = c(820, 360, 360, 320, 320, 740, 670, 420, 200, 950, 930, 2300))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/HSPA8_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("HSPA8", 4650, 750, pos = c(1200, 1000, 1800, 4650, 2000, 1100, 1400, 2450, 3950, 1000, 1200, 1400))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/IRS2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("IRS2", 105, 20, pos = c(56, 46, 35, 75, 47, 58, 88, 84, 105, 27, 27, 45))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/KIF5A_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("KIF5A", 2575, 500, pos = c(1900, 1400, 1100, 1600, 2575, 1600, 800, 1100, 300, 950, 400, 650))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/LYPD1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("LYPD1", 72, 10, pos = c(45, 58, 72, 20, 35, 58, 65, 68, 72, 49, 45, 42))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/MBP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("MBP", 25000, 5000, pos = c(9000, 11000, 4100, 3400, 14000, 9000, 10000, 8000, 2000, 11000, 11000, 24800))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/MOBP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("MOBP", 3500, 500, pos = c(1250, 1350, 450, 400, 1650, 1300, 1650, 850, 330, 1350, 1530, 3300))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/NTS_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("NTS", 565, 50, pos = c(40, 120, 125, 80, 40, 270, 220, 70, 565, 40, 320, 220))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/PHLDA1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("PHLDA1", 120, 20, pos = c(32, 35, 32, 31, 40, 43, 52, 45, 115, 32, 32, 32))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/PITPNM3_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("PITPNM3", 150, 25, pos = c(90, 102, 80, 148, 90, 70, 60, 95, 20, 65, 25, 35))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/RGS5_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("RGS5", 365, 50, pos = c(180, 145, 210, 170, 200, 190, 255, 248, 365, 225, 220, 220))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/RPS6KA2_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("RPS6KA2", 210, 50, pos = c(95, 75, 92, 55, 80, 60, 95, 90, 90, 75, 110, 210))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/SOX17_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("SOX17", 30.5, 5, pos = c(11, 20, 9.5, 7, 9, 8.5, 11, 7, 22, 9, 11, 30.5))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/TIPARP_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("TIPARP", 120, 20, pos = c(43, 46, 38, 44, 50, 55, 75, 73, 80, 30, 27, 120))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/TTLL1_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("TTLL1", 50, 10, pos = c(29, 38, 25, 48, 32, 33, 42, 32, 38, 25, 24, 32))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/USP46_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("USP46", 62, 10, pos = c(42, 42, 37, 62, 46, 45, 36, 42, 28, 32, 33, 44))
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Supp_Fig_5_Genes/VIM_bySex_4_1_2022.svg", width = 10.25, height = 5.25)
-sex_plot("VIM", 5000, 1000, pos = c(1000, 1200, 1200, 600, 850, 1300, 1100, 3400, 4900, 1200, 700, 1200))
-dev.off()
-
+### TISSUE PLOTS ----------
 vert_gene_plot <- function(gene_name, x_lim, br, strip_color = "#DE8971", 
-                 blanks = "black") {
+                           blanks = "black") {
   
   gtex_spec %>%
     mutate(System = fct_rev(case_when(
@@ -887,7 +754,7 @@ vert_gene_plot <- function(gene_name, x_lim, br, strip_color = "#DE8971",
     ggplot(aes(x = fct_rev(Tissue), fill = System, color = System)) +
     geom_point(aes(y = Mean_TPM), shape = 21, size = 3.25, color = "black",
                alpha = 0.6) +
-#    geom_point(aes(y = Median_TPM), shape = 4, stroke = 1.5, size = 3) +
+    geom_point(aes(y = Median_TPM), shape = 4, stroke = 1.5, size = 3) +
     scale_x_discrete(expand = c(0, 1.1)) +
     scale_y_continuous(limits = c(0, x_lim), breaks = seq(0, x_lim, br)) +
     scale_fill_manual(values = c("#9359CD", "grey80")) +
@@ -910,33 +777,33 @@ vert_gene_plot <- function(gene_name, x_lim, br, strip_color = "#DE8971",
     facet_wrap(~ Human_Symbol, ncol = 4, nrow = 1, scales = "free_y")
 }
 
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/MOBP_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
-# vert_gene_plot("MOBP", 1500, 500, "#DE8971", "black")
-# dev.off()
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/KIF5A_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
-# vert_gene_plot("KIF5A", 1200, 400, "#DE8971", "white")
-# dev.off()
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/MBP_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
-# vert_gene_plot("MBP", 10000, 2000, "#DE8971", "white")
-# dev.off()
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/HAPLN2_Tissue_1_24_2022.svg", width = 2.6, height = 5.4)
-# vert_gene_plot("HAPLN2", 800, 200, "#DE8971", "white")
-# dev.off()
 
+# Interesting candidate genes
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/GAD2_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
+vert_gene_plot("GAD2", 75, 25, "#44AA99", "black")
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/PRKCG_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
+vert_gene_plot("PRKCG", 102, 25, "#C148AD", "white")
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/OPALIN_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
+vert_gene_plot("OPALIN", 120, 40, "#DDCC77", "white")
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/MOBP_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
+vert_gene_plot("MOBP", 1500, 500, "white", "white")
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/KIF5A_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
+vert_gene_plot("KIF5A", 1200, 400, "white", "white")
+dev.off()
 
 # Comparison genes
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/CREB1_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
-# vert_gene_plot("CREB1", 18, 3, "grey80", "black")
-# dev.off()
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/C1QL2_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
-# vert_gene_plot("C1QL2", 24, 4, "grey80", "white")
-# dev.off()
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/DRD3_Tissue_1_24_2022.svg", width = 2.5, height = 5.4)
-# vert_gene_plot("DRD3", 4, 1, "grey80", "black")
-# dev.off()
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/CREB1_Tissue_5_31_2022.svg", width = 2.4, height = 5.4)
+vert_gene_plot("CREB1", 18, 3, "grey60", "black")
+dev.off()
 
-# Craving genes
-# svglite("G:/Users/Annika/Documents/Figures for Gene Conservation Project/SYT1_Tissue.svg", width = 2.65, height = 5.4)
-# vert_gene_plot("SYT1", 350, 75, "#DE8971", "black")
-# dev.off()
-
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/C1QL2_Tissue_5_31_2022.svg", width = 2.4, height = 5.4)
+vert_gene_plot("C1QL2", 24, 4, "grey60", "white")
+dev.off()

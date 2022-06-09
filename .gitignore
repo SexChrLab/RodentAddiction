@@ -1,0 +1,4 @@
+*.RDS
+postprocessing/downloaded_data/
+.DS_Store
+streamlined_version.R
