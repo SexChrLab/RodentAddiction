@@ -177,7 +177,7 @@ R scripts are used to perform differential expression analysis for each dataset 
 5. `individual_gtex.R`
 6. `power_analysis.R` (OPTIONAL; Can be run any time after the `final_{dataset}_DE.R` scripts)
 
-Note that `individual_conservation.R` requires data downloads from Cardoso-Moreira et al. 2020 (PubMed ID: 33113372) and `individual_gtex.R` requires data from GTEx (https://gtexportal.org/home/), which are not included here.
+Note that `individual_conservation.R` requires data downloads from Cardoso-Moreira et al. 2020 (PubMed ID: 33113372) and `individual_gtex.R` requires data from GTEx (https://gtexportal.org/home/), which are not included here - see "Directory Structure & Obtaining Additional Files".
 
 ### Naming Conventions for Initial FASTQ files
 Raw FASTQ files should be named according to the following conventions: \
