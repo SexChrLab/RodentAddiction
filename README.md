@@ -1,5 +1,4 @@
 # RodentAddiction
-
 Annika Vannan, email: avannan@asu.edu \
 https://github.com/SexChrLab/RodentAddiction \
 Last modified: 04/07/2022
@@ -14,7 +13,7 @@ Last modified: 04/07/2022
     c. `{dataset}_05_counts.snk`
 5. For each dataset, use the sample manifests/phenotype file (`{dataset}_pheno.csv`) and final gene counts run the R script `{dataset}_differential_expression.R`. Note that all R scripts in this repository should be run line-by-line to check results.
 6. Download GTEX data and process data according to `gtex_subset.slurm.sh`.
-7. Run R scripts in **post_processing/** directory to compare DEGs from each dataset. Start with `craving_overlaps_homologs.R`, and then run the other 3 scripts in any order. These scripts require downloaded data (**post_processing/downloaded_data/**). The script `craving_gtex.R` requires files from the previous step.
+7. Run R scripts in **post_processing/** directory to compare DEGs from each dataset. Start with `individual_overlaps_homologs.R`, and then run the other 3 scripts in any order. These scripts require downloaded data (**post_processing/downloaded_data/**). The script `individual_gtex.R` requires files from the previous step.
 
 
 ## Project Description
@@ -170,11 +169,15 @@ Snakemake scripts are used to process FASTQ files, align to a reference genome, 
 2. `{dataset}_03_alignment_04_processing.snk` - Creates files in the 03_alignment and 04_processing directories
 3. `{dataset}_05_counts.snk` - Creates files in the 05_counts directory
 
-R scripts are used to perform differential expression analysis for each dataset and then analyze the 3 datasets together. R scripts should be run line-by-line in the following order:
-1. `final_{dataset}_DE.R`
-2. `craving_overlaps_homologs.R`
+R scripts are used to perform differential expression analysis for each dataset and then analyze the 3 datasets together. R scripts should be run line-by-line in the following order.
+1. `final_{dataset}_DE.R` (Must be run before any other R scripts)
+2. `individual_homologs.R` (Obtains Candidate gene lists for pipeline)
+3. `candidates_overlaps_homologs.R` (OPTIONAL)
+4. `individual_conservation.R`
+5. `individual_gtex.R`
+6. `power_analysis.R` (OPTIONAL; Can be run any time after the `final_{dataset}_DE.R` scripts)
 
-Lastly, the following scripts can be run in any order: `craving_conservation.R`, `craving_gtex.R`, and `craving_power_analysis.R`. Note that `craving_conservation.R` requires data downloads from Cardoso-Moreira et al. 2020 (PubMed ID: 33113372) and `craving_gtex.R` requires data from GTEx (https://gtexportal.org/home/).
+Note that `individual_conservation.R` requires data downloads from Cardoso-Moreira et al. 2020 (PubMed ID: 33113372) and `individual_gtex.R` requires data from GTEx (https://gtexportal.org/home/), which are not included here.
 
 ### Naming Conventions for Initial FASTQ files
 Raw FASTQ files should be named according to the following conventions: \
@@ -265,11 +268,12 @@ The RNA-seq workflow will create directories for each dataset that follow the st
 |   |   |       └── walker_FINAL_treat_ins.RDS
 |   |   └── other
 |   |       └── all_genes_list.RDS
-|   └── scripts 
-|       ├── craving_conservation.R
-|       ├── craving_gtex.R
-|       ├── craving_overlaps_homologs.R
-|       └── craving_power_analysis.R
+|   └── scripts
+|       ├── candidates_overlaps_homologs.R
+|       ├── individual_conservation.R
+|       ├── individual_gtex.R
+|       ├── individual_homologs.R
+|       └── power_analysis.R
 └── walker
     ├── 00_misc_and_scripts
     |   ├── gene_counts
