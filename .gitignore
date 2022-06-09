@@ -1,3 +1,5 @@
 **/*.RDS
 post_processing/downloaded_data/
 **/streamlined_version.R
+**/~$tables.xlsx
+**/.DS_Store
