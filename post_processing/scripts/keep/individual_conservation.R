@@ -97,11 +97,11 @@ new_hom <- getBM(attributes = c("external_gene_name", # Gene symbol
 
 # Separate by mouse and rat
 new_mouse_hom <- new_hom %>%
-  dplyr::dplyr::select(-contains("Rat")) %>%
+  dplyr::select(-contains("Rat")) %>%
   unique()
   
 new_rat_hom <- new_hom %>%
-  dplyr::dplyr::select(-contains("Mouse")) %>%
+  dplyr::select(-contains("Mouse")) %>%
   unique()
 
 # Get general datasets for supplementary material
@@ -149,7 +149,7 @@ walk_new_mouse_hom <- new_hom %>%
   dplyr::select(-contains("Rat")) %>%
   unique() %>%
   mutate(Gene_Group = "Walker")
-pow_new_mouse_hom<- new_hom %>%
+pow_new_mouse_hom <- new_hom %>%
   filter(Human_ID %in% sig_pow_hs_ids, Rat_ID %in% sig_pow_rn_ids,
          Mouse_Ortho_Type == "ortholog_one2one") %>%
   dplyr::select(-contains("Rat")) %>%
@@ -180,15 +180,15 @@ pow_new_rat_hom <- new_hom %>%
 full_new_mouse_hom <- Reduce(function(x, y) 
   full_join(x, y), list(carp_new_mouse_hom, walk_new_mouse_hom, pow_new_mouse_hom, new_mouse_hom)) %>%
   mutate(Gene_Group = fct_relevel(ifelse(is.na(Gene_Group), 
-                                         "All Other\nHomologs", Gene_Group),
-                                  levels = c("Carpenter", "Walker", "Powell", "All Other\nHomologs"))) %>%
+                                         "All Other Homologs", Gene_Group),
+                                  levels = c("Carpenter", "Walker", "Powell", "All Other Homologs"))) %>%
   filter(Mouse_Ortho_Type == "ortholog_one2one") %>%
   unique()
 
 full_new_rat_hom <- Reduce(function(x, y) 
   full_join(x, y), list(carp_new_rat_hom, walk_new_rat_hom, pow_new_rat_hom, new_rat_hom)) %>%
   mutate(Gene_Group = fct_relevel(ifelse(is.na(Gene_Group), 
-                                         "All Other\nHomologs", Gene_Group),
+                                         "All Other Homologs", Gene_Group),
                                   levels = c("Carpenter", "Walker", "Powell", "All Other Homologs"))) %>%
   filter(Rat_Ortho_Type == "ortholog_one2one") %>%
   unique()
@@ -198,6 +198,7 @@ full_new_rat_hom <- Reduce(function(x, y)
 # Stats comparing each dataset to the ones in no datasets
 stat_mouse_perc <- full_new_mouse_hom %>%
   filter(!is.na(MouseToHuman_PercMatch)) %>%
+  unique() %>%
   wilcox_test(MouseToHuman_PercMatch ~ Gene_Group, 
               p.adjust.method = "bonferroni") %>%
   filter(group2 == "All Other Homologs")
@@ -450,100 +451,6 @@ full_old_mouse_hom %>%
 # the statistical analysis.
 
 
-### PLOTS ----------
-# Label select outliers
-# Genes to label
-shared_mouse_dnds_label_list <- c("BCAS1")
-general_mouse_dnds_label_list <- c("XAF1", "ARMCX4", "ZDBF2",
-                                   "PPP1R15A", "CFAP74",
-                                   "CABYR", "GPRIN3", "SPINT3")
-
-mouse_dnds_plot <- full_old_mouse_hom %>%
-  mutate(Gene_Group = as.character(Gene_Group),
-         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other\nHomologs" ~ "Other",
-                                            TRUE ~ Gene_Group),
-                                  levels = c("Carpenter", "Walker", "Powell", "Other"))) %>%
-  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf) %>%
-  ggplot(aes(x = Gene_Group, y = Mouse_DNDS)) +
-  geom_violin(aes(fill = Gene_Group), width = 0.8) +  
-  geom_boxplot(fill = "white", color = "black", width = 0.18, 
-               outlier.size = 2, outlier.shape = 21, outlier.color = "grey80", 
-               outlier.fill = "black", outlier.alpha = 0.6) +
-  labs(x = "", y = "dN/dS with Human Homolog",
-       title = "Mouse-Human") +
-  scale_x_discrete(expand = c(0, 0.55)) +
-  scale_y_continuous(limits = c(0, 2.45), breaks = seq(0, 2.4, 0.4), expand = c(0, 0)) +
-  scale_fill_manual(values = c("#44AA99", "#C148AD", "#DDCC77", "grey60")) +
-  theme(legend.position = "none", axis.ticks.x = element_blank(), 
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(color = "grey65"),
-        panel.grid.minor.y = element_line(color = "grey85"),
-        axis.text = element_text(size = 13),
-        axis.title.x = element_text(size = 14),
-        axis.title.y = element_text(size = 13.5),
-        panel.border = element_blank(),
-        axis.line = element_line(color = "black")) +
-  geom_label_repel(data = . %>%
-                     mutate(label = ifelse(BM_Human_Gene_Name %in% shared_mouse_dnds_label_list, 
-                                           BM_Human_Gene_Name, NA_character_)),
-                   aes(label = label), color = "black", fill = "white",
-                   nudge_x = c(0.45, 0.25), nudge_y = c(-0.2, 0.2), 
-                   fontface = "bold", size = 3, seed = 41) +
-  geom_label_repel(data = . %>%
-                     mutate(label = ifelse(BM_Human_Gene_Name %in% general_mouse_dnds_label_list, 
-                                           BM_Human_Gene_Name, NA_character_)),
-                   aes(label = label, fill = Gene_Group), color = "black",
-                   box.padding = 0.5, fontface = "bold", size = 3, seed = 43)
-# NOTE THAT 1 "ALL OTHER" OUTLIER HAS BEEN REMOVED FROM PLOT FOR CLARITY
-# Outlier: CDR1 (98.98)
-
-shared_rat_dnds_label_list <- c("BCAS1")
-general_rat_dnds_label_list <- c("XAF1", "ARMCX4", "ZDBF2",
-                                 "PPP1R15A",
-                                 "CABYR", "GPRIN3")
-
-rat_dnds_plot <- full_old_rat_hom %>%
-  mutate(Gene_Group = as.character(Gene_Group),
-         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other\nHomologs" ~ "Other",
-                                            TRUE ~ Gene_Group),
-                                  levels = c("Carpenter", "Walker", "Powell", "Other"))) %>%
-  ggplot(aes(x = Gene_Group, y = Rat_DNDS)) +
-  geom_violin(aes(fill = Gene_Group), width = 0.75) +  
-  geom_boxplot(fill = "white", color = "black", width = 0.18, 
-               outlier.size = 2, outlier.shape = 21, outlier.color = "grey80", 
-               outlier.fill = "black", outlier.alpha = 0.9) +
-  labs(x = "", y = "dN/dS with Human Homolog",
-       title = "Rat-Human") +
-  scale_y_continuous(limits = c(0, 1.63), breaks = seq(0, 1.6, 0.4), expand = c(0, 0)) +
-  scale_fill_manual(values = c("#44AA99", "#C148AD", "#DDCC77", "grey60")) +
-  theme(legend.position = "none", axis.ticks.x = element_blank(), 
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_line(color = "grey65"),
-        panel.grid.minor.y = element_line(color = "grey85"),
-        axis.text = element_text(size = 13),
-        axis.title.x = element_text(size = 14),
-        axis.title.y = element_text(size = 13.5, color = "white"),
-        panel.border = element_blank(),
-        axis.line = element_line(color = "black")) +
-  geom_label_repel(data = . %>%
-                   mutate(label = ifelse(BM_Human_Gene_Name %in% shared_rat_dnds_label_list, 
-                                           BM_Human_Gene_Name, NA_character_)),
-                 aes(label = label), color = "black", fill = "white",
-                 box.padding = 0.5, fontface = "bold", size = 3, seed = 41) +
-  geom_label_repel(data = . %>%
-                     mutate(label = ifelse(BM_Human_Gene_Name %in% general_rat_dnds_label_list, 
-                                           BM_Human_Gene_Name, NA_character_)),
-                   aes(label = label, fill = Gene_Group), color = "black",
-                   box.padding = 0.4, fontface = "bold", size = 3, seed = 80)
-# NOTE THAT 2 "ALL OTHER" OUTLIERS HAVE BEEN REMOVED FROM PLOT FOR CLARITY
-# Outliers: WDR83OS (6.01); LPA (3.49)
-
-# Save plots
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Cons_DNDS_5_31_2022.svg", width = 9, height = 4)
-ggarrange(mouse_dnds_plot, rat_dnds_plot)
-dev.off()
-
-
 # COMPARE TO DEVELOPMENTAL EXPRESSION ACROSS SPECIES -----------
 # "Developmental gene expression differences between humans & mammalian models"
 # Cardoso-Moriera et al. (2020)
@@ -632,7 +539,7 @@ full_cons2020 %>%
   group_by(Gene_Group) %>%
   count()
 # C: 431 (of 585 human genes), W: 65 (of 116 human genes)
-# P: 391 (of 537 human genes); All Others: 9191
+# P: 391 (of 537 human genes); All Others: 9011
 
 # How many have Conservation scores for both H-M and H-R?
 full_cons2020 %>%
@@ -640,7 +547,7 @@ full_cons2020 %>%
   filter(!is.na(Conservation)) %>%
   count()
 # C: 330 (of 585 human genes), W: 47 (of 116 human genes)
-# P: 323 (of 537 human genes); All Others: 9191
+# P: 323 (of 537 human genes); All Others: 6152
 
 ### PLOT ----------
 # Plot counts on flexible y scales so that they are more comparable
@@ -689,9 +596,9 @@ for (i in striprt) {
 
 grid::grid.draw(cm_gtable)
 
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/CM_Dev_Conservation_5_31_2022.svg", width = 8.7, height = 3.4)
+# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/CM_Dev_Conservation_5_31_2022.svg", width = 8.7, height = 3.4)
 grid::grid.draw(cm_gtable)
-dev.off()
+# dev.off()
 
 
 ### STATISTICS ----------
@@ -835,4 +742,111 @@ full_old_rat_hom %>%
   filter(!is.na(Rat_DNDS), Rat_DNDS != Inf, Human_ID %in% consistent_hs_ids) %>%
   group_by(Gene_Group) %>%
   summarize(Median = median(Rat_DNDS))
+
+
+### DN/DS PLOTS ----------
+# Label select outliers
+# Genes to label
+shared_mouse_dnds_label_list <- c("BCAS1")
+general_mouse_dnds_label_list <- c("XAF1", "ARMCX4", "ZDBF2",
+                                   "PPP1R15A", "CFAP74",
+                                   "CABYR", "GPRIN3", "SPINT3")
+
+mouse_dnds_plot <- full_old_mouse_hom %>%
+  mutate(Gene_Group = as.character(Gene_Group),
+         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other\nHomologs" ~ "Other",
+                                            TRUE ~ Gene_Group),
+                                  levels = c("Carpenter", "Walker", "Powell", "Other"))) %>%
+  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf) %>%
+  ggplot(aes(x = Gene_Group, y = Mouse_DNDS)) +
+  geom_violin(aes(fill = Gene_Group), width = 0.8) +  
+  geom_boxplot(fill = "white", color = "black", width = 0.18, 
+               outlier.size = 2, outlier.shape = 21, outlier.color = "grey80", 
+               outlier.fill = "black", outlier.alpha = 0.6) +
+  labs(x = "", y = "dN/dS with Human Homolog",
+       title = "Mouse-Human") +
+  scale_x_discrete(expand = c(0, 0.55)) +
+  scale_y_continuous(limits = c(0, 2.45), breaks = seq(0, 2.4, 0.4), expand = c(0, 0)) +
+  scale_fill_manual(values = c("#44AA99", "#C148AD", "#DDCC77", "grey60")) +
+  theme(legend.position = "none", axis.ticks.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey65"),
+        panel.grid.minor.y = element_line(color = "grey85"),
+        axis.text = element_text(size = 13),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 13.5),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black")) +
+  geom_label_repel(data = . %>%
+                     mutate(label = ifelse(BM_Human_Gene_Name %in% shared_mouse_dnds_label_list, 
+                                           BM_Human_Gene_Name, NA_character_)),
+                   aes(label = label), color = "black", fill = "white",
+                   nudge_x = c(0.45, 0.25), nudge_y = c(-0.2, 0.2), 
+                   fontface = "bold", size = 3, seed = 41) +
+  geom_label_repel(data = . %>%
+                     mutate(label = ifelse(BM_Human_Gene_Name %in% general_mouse_dnds_label_list, 
+                                           BM_Human_Gene_Name, NA_character_)),
+                   aes(label = label, fill = Gene_Group), color = "black",
+                   box.padding = 0.5, fontface = "bold", size = 3, seed = 43)
+# NOTE THAT 1 "ALL OTHER" OUTLIER HAS BEEN REMOVED FROM PLOT FOR CLARITY
+# Outlier: CDR1 (98.98)
+
+shared_rat_dnds_label_list <- c("BCAS1")
+general_rat_dnds_label_list <- c("XAF1", "ARMCX4", "ZDBF2",
+                                 "PPP1R15A",
+                                 "CABYR", "GPRIN3")
+
+full_old_rat_hom %>%
+  mutate(Gene_Group = as.character(Gene_Group),
+         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other\nHomologs" ~ "Other",
+                                            TRUE ~ Gene_Group),
+                                  levels = c("Carpenter", "Walker", "Powell", "Other"))) %>%
+  filter(!is.na(Rat_DNDS), Rat_DNDS != Inf, Human_ID %in% consistent_hs_ids) %>%
+  View()
+  
+  
+rat_dnds_plot <- full_old_rat_hom %>%
+  mutate(Gene_Group = as.character(Gene_Group),
+         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other\nHomologs" ~ "Other",
+                                            TRUE ~ Gene_Group),
+                                  levels = c("Carpenter", "Walker", "Powell", "Other"))) %>%
+  filter(!is.na(Rat_DNDS), Rat_DNDS != Inf, Human_ID %in% consistent_hs_ids) %>%
+  ggplot(aes(x = Gene_Group, y = Rat_DNDS)) +
+  geom_violin(aes(fill = Gene_Group), width = 0.75) +  
+  geom_boxplot(fill = "white", color = "black", width = 0.18, 
+               outlier.size = 2, outlier.shape = 21, outlier.color = "grey80", 
+               outlier.fill = "black", outlier.alpha = 0.9) +
+  labs(x = "", y = "dN/dS with Human Homolog",
+       title = "Rat-Human") +
+  scale_y_continuous(limits = c(0, 1.63), breaks = seq(0, 1.6, 0.4), expand = c(0, 0)) +
+  scale_fill_manual(values = c("#44AA99", "#C148AD", "#DDCC77", "grey60")) +
+  theme(legend.position = "none", axis.ticks.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey65"),
+        panel.grid.minor.y = element_line(color = "grey85"),
+        axis.text = element_text(size = 13),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 13.5, color = "white"),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black")) +
+  geom_label_repel(data = . %>%
+                     mutate(label = ifelse(BM_Human_Gene_Name %in% shared_rat_dnds_label_list, 
+                                           BM_Human_Gene_Name, NA_character_)),
+                   aes(label = label), color = "black", fill = "white",
+                   box.padding = 0.5, fontface = "bold", size = 3, seed = 41) +
+  geom_label_repel(data = . %>%
+                     mutate(label = ifelse(BM_Human_Gene_Name %in% general_rat_dnds_label_list, 
+                                           BM_Human_Gene_Name, NA_character_)),
+                   aes(label = label, fill = Gene_Group), color = "black",
+                   box.padding = 0.4, fontface = "bold", size = 3, seed = 80)
+# NOTE THAT 1 "ALL OTHER" OUTLIER HAS BEEN REMOVED FROM PLOT FOR CLARITY
+# Outliers: LPA (3.49)
+
+# Save plots
+# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Cons_DNDS_5_31_2022.svg", width = 9, height = 4)
+ggarrange(mouse_dnds_plot, rat_dnds_plot)
+# dev.off()
+
+
+
 

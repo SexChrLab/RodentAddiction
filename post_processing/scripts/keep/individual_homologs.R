@@ -110,9 +110,10 @@ mart_mm_names_walk <- getBM(attributes = c("ensembl_gene_id",
                             values = all_mm_ids_walk, mart = grcm39) %>%
   setNames(c("Original_Gene_ID", "Gene.Name"))
 
-mart_rn_names <- getBM(attributes = c("ensembl_gene_id", "external_gene_name"),
-                       filter = "ensembl_gene_id", values = all_rn_ids,
-                       mart = mRatBN7.2) %>%
+mart_rn_names <- getBM(attributes = c("ensembl_gene_id", 
+                                      "external_gene_name"),
+                       filter = "ensembl_gene_id", 
+                       values = all_rn_ids, mart = mRatBN7.2) %>%
   setNames(c("Original_Gene_ID", "Gene.Name"))
 
 # Check that dimensions match number of genes
@@ -133,8 +134,7 @@ full_df %>%
   filter(Study == "Powell") %>%
   dplyr::select(-Gene.Name) %>%
   inner_join(mart_rn_names) %>%
-  relocate(Gene.Name, .after = Original_Gene_ID) %>%
-  write_clip()
+  relocate(Gene.Name, .after = Original_Gene_ID)
 
 
 ## GET SIGNIFICANT GENES ----------
@@ -177,7 +177,7 @@ sig_df_fc %>%
             min_FC = min(FC), mean_FC = mean(FC), median_FC = median(FC), 
             max_FC = max(FC))
 
-# Significant genes only (rewrite "sig_df")
+# Significant genes only
 sig_df_fc <- full_df %>% filter(P.Value < 0.05, abs(logFC) > log2(1.2))
 sig_df <- full_df %>% filter(P.Value < 0.05)
 
@@ -218,11 +218,11 @@ volcano_plot <- function(df, study, rect_fill, x_lim = NULL, x_breaks = waiver()
   
   # Add labels to dataframe for significant genes
   new_df <- df %>%
-    mutate(DE = fct_relevel(case_when((logFC > log2(1.2) & P.Value < 0.05 ~ "Up"),
-                                      (logFC < -log2(1.2) & P.Value < 0.05 ~ "Down"),
+    mutate(DE = fct_relevel(case_when((logFC > log2(1) & P.Value < 0.05 ~ "Up"),
+                                      (logFC < -log2(1) & P.Value < 0.05 ~ "Down"),
                                       TRUE ~ "None"),
                             levels = c("None", "Down", "Up")),
-           DE2 = fct_relevel(case_when((logFC < -log2(1.2) & adj.P.Val < 0.05 ~ "Down"),
+           DE2 = fct_relevel(case_when((logFC < -log2(1) & adj.P.Val < 0.05 ~ "Down"),
                                        TRUE ~ "None"),
                              levels = c("None", "Down")),
            Abs_logFC = abs(logFC),
@@ -264,7 +264,6 @@ volcano_plot <- function(df, study, rect_fill, x_lim = NULL, x_breaks = waiver()
 vo1 <- volcano_plot(full_df, "Carpenter", "#44AA99", c(-1.5, 1.5), seq(-1.5, 1.5, 0.5), 4.2, "white", "black")
 vo2 <- volcano_plot(full_df, "Walker", "#C148AD", c(-2, 2), seq(-2, 2, 1), 5, "black", "white")
 vo3 <- volcano_plot(full_df, "Powell", "#DDCC77", c(-10, 4), seq(-10, 4, 2), 5.2)
-# 390, 420
 
 # svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Carpenter_volcano_1_24_2022.svg", width = 4.25, height = 4.25)
 vo1
@@ -304,9 +303,9 @@ sig_carp_bm <- getBM(attributes = c("external_gene_name", # Gene symbol
 
 
 # Pull human, mouse, and rat IDs
-sig_carp_mm_ids <- sig_carp_bm %>% pull(Mouse_ID) %>% unique() # 633
-sig_carp_rn_ids <- sig_carp_bm %>% pull(Rat_ID) %>% unique() # 591
-sig_carp_hs_ids <- sig_carp_bm %>% pull(Human_ID) %>% unique() # 586
+sig_carp_mm_ids <- sig_carp_bm %>% filter(!is.na(Mouse_ID)) %>% pull(Mouse_ID) %>% unique() # 633
+sig_carp_rn_ids <- sig_carp_bm %>% filter(!is.na(Rat_ID)) %>% pull(Rat_ID) %>% unique() # 590
+sig_carp_hs_ids <- sig_carp_bm %>% filter(!is.na(Human_ID)) %>% pull(Human_ID) %>% unique() # 585
 
 
 ### WALKER -----
@@ -334,9 +333,9 @@ sig_walk_bm <- getBM(attributes = c("external_gene_name", # Gene symbol
                                    TRUE ~ "No"))
 
 # Pull human, mouse, and rat IDs
-sig_walk_mm_ids <- sig_walk_bm %>% pull(Mouse_ID) %>% unique() # 139
-sig_walk_rn_ids <- sig_walk_bm %>% pull(Rat_ID) %>% unique() # 124
-sig_walk_hs_ids <- sig_walk_bm %>% pull(Human_ID) %>% unique() # 117
+sig_walk_mm_ids <- sig_walk_bm %>% filter(!is.na(Mouse_ID)) %>% pull(Mouse_ID) %>% unique() # 139
+sig_walk_rn_ids <- sig_walk_bm %>% filter(!is.na(Rat_ID)) %>% pull(Rat_ID) %>% unique() # 123
+sig_walk_hs_ids <- sig_walk_bm %>% filter(!is.na(Human_ID)) %>% pull(Human_ID) %>% unique() # 116
 
 
 ### POWELL -----
@@ -364,9 +363,9 @@ sig_pow_bm <- getBM(attributes = c("external_gene_name", # Gene symbol
                                    TRUE ~ "No"))
 
 # Pull human, mouse, and rat IDs
-sig_pow_mm_ids <- sig_pow_bm %>% pull(Mouse_ID) %>% unique() # 538
-sig_pow_rn_ids <- sig_pow_bm %>% pull(Rat_ID) %>% unique() # 580
-sig_pow_hs_ids <- sig_pow_bm %>% pull(Human_ID) %>% unique() # 538
+sig_pow_mm_ids <- sig_pow_bm %>% filter(!is.na(Mouse_ID)) %>% pull(Mouse_ID) %>% unique() # 537
+sig_pow_rn_ids <- sig_pow_bm %>% filter(!is.na(Rat_ID)) %>% pull(Rat_ID) %>% unique() # 580
+sig_pow_hs_ids <- sig_pow_bm %>% filter(!is.na(Human_ID)) %>% pull(Human_ID) %>% unique() # 537
 
 
 ## CREATE RDS OBJECT ----------
@@ -383,13 +382,15 @@ saveRDS(all_genes_list, file = paste0(main_dir, "post_processing/results/other/a
 
 
 ## ANY GENES SHARED? ----------
-# Shared in all 3 datasets
+# Shared in all 3 datasets (mouse gene/ortholog)
 shared_genes <- data.frame(Gene = c(sig_carp_mm_ids, sig_walk_mm_ids, sig_pow_mm_ids)) %>%
   group_by(Gene) %>%
   mutate(Count = length(Gene)) %>%
   arrange(desc(Count)) %>%
-  unique()
-
+  unique() %>%
+  filter(Count == 3) %>%
+  pull(Gene)
+shared_genes # "ENSMUSG00000060802"
 
 
 

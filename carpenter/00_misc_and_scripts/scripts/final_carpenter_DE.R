@@ -142,7 +142,7 @@ keep_genes_fpkm <- fpkm_means %>%
   filter(S28abs_mean > 0.5 | C28abs_mean > 0.5) %>%
   pull(Gene_ID)
 
-# Must also have a read count of at least 6 for 2 (min. sample size) samples
+# Must also have a read count of at least 6 for 6 (min. sample size) samples
 keep_genes_count <- g_original %>%
   mutate(across(starts_with("SRS"), ~ ifelse(.x >=6, TRUE, FALSE))) %>%
   group_by(Gene_ID) %>%

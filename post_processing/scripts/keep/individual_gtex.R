@@ -377,8 +377,7 @@ bysex_tissue_anovas_temp <- final_bysex_tpm %>%
 bysex_tissue_anovas <- gtex %>%
   dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
   right_join(., bysex_tissue_anovas_temp) %>%
-  unique() %>%
-  filter(Gene_Group != "All Other Genes")
+  unique()
 
 # Genes with main effects or interactions
 genes_sex <- bysex_tissue_anovas %>% 
@@ -430,8 +429,7 @@ sex_summary_temp <- final_bysex_tpm %>%
 sex_summary <- gtex %>%
   dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
   right_join(., sex_summary_temp) %>%
-  unique() %>%
-  filter(Gene_Group != "All Other Genes")
+  unique()
 
 # TISSUE EFFECT:
 # Post-hoc Tukey tests for each gene with significant main effect of Tissue
@@ -667,7 +665,7 @@ bs_plot
 
 ### STATISTICS ----------
 # Wilcoxon test between groups
-# Are craving genes more specific to the brain than other genes?
+# Are Candidate genes more specific to the brain than other genes?
 gtex_spec %>%
   dplyr::select(Human_ID, System, BrainSpec, Gene_Group) %>%
   unique() %>%
@@ -696,7 +694,7 @@ cns_means_df <- gtex %>%
   unique() %>%
   pivot_wider(names_from = System, values_from = System_Mean) %>%
   dplyr::select(-Body) %>%
-  rename(CNS_Mean = CNS) %>%
+  dplyr::rename(CNS_Mean = CNS) %>%
   filter(!is.na(CNS_Mean)) %>%
   ungroup()
 

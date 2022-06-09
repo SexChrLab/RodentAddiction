@@ -302,7 +302,7 @@ powell_bm <- getBM(attributes = c("external_gene_name", # Gene symbol
                 Human_ID = hsapiens_homolog_ensembl_gene) %>%
   mutate(across(everything(), function(x) na_if(x, "")))
 
-# Signficant Powell genes, mouse homologs
+# Significant Powell genes, mouse homologs
 # As a dataframe
 sig_powell_mouse_hom_df <- sig_df %>%
   filter(Study == "Powell") %>%
@@ -390,7 +390,7 @@ carp_pow_reg_info <- carp_pow_sig_info %>%
                      Carpenter_Direction == "Down" & Powell_Direction == "Up" ~ "CDown_PUp",
                      TRUE ~ "Check_Manually"))
 
-# How many are in the same direction? (20/45 genes)
+# How many are in the same direction? (20/45 genes, but see next lines)
 rat_carp_same_reg <- carp_pow_reg_info %>% 
   filter(str_detect(Is_Same_Direction, "Both")) %>%
   pull(Rat_ID)
@@ -404,7 +404,7 @@ sig_mm_bm %>%
   sum()
 
 # Any that need to be checked manually? YES
-carp_pow_reg_info %>% filter(Is_Same_Direction == "Check_Manually") %>% View()
+carp_pow_reg_info %>% filter(Is_Same_Direction == "Check_Manually")
 
 # Add ENSRNOG00000052224 to the shared genes by modifying dataframe
 carp_pow_reg_info2 <- carp_pow_reg_info %>%

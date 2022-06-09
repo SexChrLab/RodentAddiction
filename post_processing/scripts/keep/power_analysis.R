@@ -10,7 +10,7 @@ library(tictoc)
 
 ## POWER ANALYSES ---------
 # Get list of all objects for each dataset
-setwd("C:/Annika/GitHub Repositories/RodentAddiction/post_processing/results/power_objects/")
+setwd("G:/Noctsol/GitHub Repositories/RodentAddiction/post_processing/results/power_objects/")
 carpenter_obj <- readRDS(file = "carpenter_obj_4power.RDS")
 walker_obj <- readRDS(file = "walker_obj_4power.RDS")
 powell_obj <- readRDS(file = "powell_obj_4power.RDS")
