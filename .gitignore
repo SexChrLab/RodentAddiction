@@ -1,9 +1,0 @@
-**/*.RDS
-**/downloaded_data/
-**/.DS_Store
-.gitattributes
-.gitignore
-
-
-**/~$tables.xlsx
-**/streamlined_version.R
