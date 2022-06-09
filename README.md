@@ -232,21 +232,6 @@ The RNA-seq workflow will create directories for each dataset that follow the st
 |       |   └── powell_{sample}_run{1-4}.fastq (24 files; 6 samples) *
 |       └── concatenated
 ├── post_processing
-|   ├── downloaded_data
-|   |   ├── cm2020
-|   |   |   ├── 1-s2.0-S2211124720312973-mmc3.xlsx *
-|   |   |   └── 1-s2.0-S2211124720312973-mmc4.xlsx *
-|   |   └── gtex
-|   |       └── count_subsets
-|   |       |   ├── gtex_subset.slurm.sh
-|   |       |   └── subset_{brain_tissue}.txt (14 files) ^
-|   |       ├── count_mean_median
-|   |       |   ├── by_sex
-|   |       |   |   └── {tissue}_bysex_counts_mean_median.txt (53 files) ^
-|   |       |   └── {tissue}_overall_counts_mean_median.txt (53 files) ^
-|   |       ├── GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt *
-|   |       ├── GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt *
-|   |       └── participant.tsv *
 |   ├── results
 |   |   ├── gene_info
 |   |   |   ├── carpenter_DE_FINAL.txt
