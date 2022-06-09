@@ -1,0 +1,69 @@
+###########################################
+###### Workflow for Salmon alignment ######
+###########################################
+
+## - Information about project & samples - ##
+# Original fastq files were obtained from the Short Read Archive (SRA).
+# All sample names (indicated by {sample}) include both the Sequence Read Archive (SRA) Sample ID (SRS#) and the treatment group - e.g. SRS5770694_C1abs.
+# SRA Project ID: SRP234876; Bioproject ID: PRJNA593775; Gene Expression Omnibus Series ID: GSE141520
+
+## - Using This Script - ##
+# See README file in GitHub before running these scripts.
+# Remember to change variables under the heading "USERS SHOULD CHANGE THE FOLLOWING VARIABLES"
+
+#####################
+## Start of Script ##
+#####################
+
+import os
+
+## - USERS SHOULD CHANGE THE FOLLOWING VARIABLES - ##
+# Config file
+configfile: "carpenter_config.json"
+
+# Reference Directories
+salmon_index = "/scratch/avannan/refs/mouse/mm10/salmon_index"
+hisat2_index = "/scratch/avannan/refs/mouse/GRCm39/HISAT2_splice/GRCm39_genome_tran"
+# Starting Directory
+start_dir = "/data/CEM/wilsonlab/projects/rodent_addiction/"
+## -- END SECTION FOR CHANGING VARIABLES -- ##
+
+
+# Directory Variables
+# Trimmed FASTQs
+trimmed_fastq_dir = os.path.join(start_dir, config["trimmed_fastq_dir"]) # Trimmed FASTQs
+# Alignment
+salmon_dir = os.path.join(start_dir, config["salmon_dir"]) # Checking library type with Salmon
+
+######################
+## All Output Files ##
+######################
+
+rule all:
+	input:
+		# CHECK LIBRARY TYPE (PLUS ALIGN/COUNT) WITH SALMON
+		expand(os.path.join(salmon_dir, "carpenter_{sample}_salmon_quant/"), sample = config["28abs_ALL"])
+
+##################
+## 03_alignment ##
+##################
+
+####################################
+## Check library type with Salmon ##
+####################################
+
+rule salmon_quant:
+	input:
+		TRIMMED_FQ1 = os.path.join(trimmed_fastq_dir, "carpenter_{sample}_trim_fq1.fastq"),
+		TRIMMED_FQ2 = os.path.join(trimmed_fastq_dir, "carpenter_{sample}_trim_fq2.fastq"),
+	output:
+		OUTPUT = os.path.join(salmon_dir, "carpenter_{sample}_salmon_quant/")
+	params:
+		salmon_index = salmon_index,
+		libtype = "A", # Automatic detection of library type
+		threads = 8
+	shell:
+		"""
+		source ~/miniconda3/etc/profile.d/conda.sh && conda deactivate && conda activate salmon &&
+		salmon quant -i {params.salmon_index} -l {params.libtype} -1 {input.TRIMMED_FQ1} -2 {input.TRIMMED_FQ2} -o {output.OUTPUT}
+		"""
