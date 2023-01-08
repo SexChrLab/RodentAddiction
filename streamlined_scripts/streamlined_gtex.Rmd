@@ -1,0 +1,810 @@
+---
+title: "Streamlined Conservation"
+output: html_document
+author: Annika Vannan, avannan@asu.edu
+date: 12/18/22
+---
+
+## Set-Up
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(dplyr.inform = FALSE)
+```
+
+### Load Libraries
+Make sure you have the following libraries downloaded before using this script:
+
+- tidyverse
+- rlist
+- readxl
+- ggpubr
+- rstatix
+- emmeans
+- multcomp
+- multcompView
+- MatchIt
+
+```{r, warning = FALSE, message = FALSE, error = FALSE}
+library(tidyverse); library(rlist); library(readxl) # Data manipulation
+library(ggplot2); library(ggpubr) # Plots and visualizations
+library(rstatix) # Statistics
+library(MatchIt) # Matching samples
+
+# Set dplyr functions
+select <- dplyr::select
+filter <- dplyr::filter
+rename <- dplyr::rename
+```
+
+### Setting Other Variables
+Users must alter the following variables before running this script on their own
+data. This includes where the output CSV files should be written to, and the
+**human genes** that will be assessed (as ENSEMBL IDs). *This is different from
+the conservation script, which takes mouse or rat genes. Since the GTEx database
+has information from humans, we will need to put human orthologs in script and
+examine those as a proxy for the rodent genes.* This script is written to take 
+**human genes** as a character vector, but can be altered to take the gene
+names directly from an Excel or CSV file. 
+
+*Do not use version numbers for genes. For example, type "ENSG00000223972",
+not "ENSG00000223972.5".*
+
+In this example, we will use a small number of genes for ease of computation and
+interpretation. For this reason, most of the results will be statistically
+significant. With a larger, real dataset with your own genes of interest,
+you are likely to get more meaningful results.
+
+We also need files downloaded from the GTEx database - see code below. This
+includes:
+
+* GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt
+* GTEx_Analysis_v8_Annotations_SamplePhenotypesDS.txt
+* GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct.gz
+
+You will also need **all** 54 of the by-tissue TPM files, all located in the 
+same folder. The files have names like 
+`gene_tpm_2017-06-05_v8_adipose_subcutaneous.gct.gz`. Put all of these files in
+the same folder, and then change the following code chunk to reference that 
+folder. Make sure no other files are in that folder.
+
+```{r}
+# Location of GTEX files
+att_file <- "G:/Noctsol/Github Repositories/RodentAddiction/post_processing/downloaded_data/gtex/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
+pheno_file <- "G:/Noctsol/Github Repositories/RodentAddiction/post_processing/downloaded_data/gtex/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt"
+gtex_file <- "G:/Noctsol/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct.gz"
+tpm_folder <- "G:/Noctsol/tpm_files/"
+
+# List of human genes; use ENSEMBL IDs
+all_hs_ids <- c("ENSG00000132702", "ENSG00000064787", "ENSG00000116161", 
+                "ENSG00000164434", "ENSG00000133636", "ENSG00000139289", 
+                "ENSG00000015133", "ENSG00000164326", "ENSG00000100271", 
+                "ENSG00000167588", "ENSG00000071242", "ENSG00000167996", 
+                "ENSG00000167996", "ENSG00000164736", "ENSG00000150551",
+                "ENSG00000143248", "ENSG00000026025", "ENSG00000006530",
+                "ENSG00000004478", "ENSG00000140488", "ENSG00000273025", 
+                "ENSG00000168314", "ENSG00000164116", "ENSG00000163659", 
+                "ENSG00000133639", "ENSG00000122877", "ENSG00000185950", 
+                "ENSG00000091622", "ENSG00000197971", "ENSG00000174945", 
+                "ENSG00000109189", "ENSG00000166710", "ENSG00000155980")
+```
+
+We also need to set the locations where the final output files should be saved.
+
+```{r}
+anova_file <- "C:/Annika/Documents/brain_anova.csv"
+tissue_effect_file <- "C:/Annika/Documents/brain_tissue_posthoc.csv"
+tissue_cld_file <- "C:/Annika/Documents/brain_tissue_clds.csv"
+interaction_file <- "C:/Annika/Documents/brain_interaction_posthoc.csv"
+brain_spec_file <- "C:/Annika/Documents/brain_spec.csv"
+```
+
+### Optional Parameters
+These parameters are optional to change and make the graphs prettier and the
+stat outputs easier to read.
+
+```{r}
+# Reduce chances of scientific notation
+options(scipen = 9999)
+
+# Update and set ggplot theme globally
+new_theme <- theme_bw(base_size = 14) %+replace%
+  theme(axis.text = element_text(color = "black"),
+        plot.title = element_text(hjust = 0.5))
+theme_set(new_theme)
+```
+
+## Loading and Preparing GTEX Data and Metadata
+First we need to load in the GTEX data. In the manuscript, we looked at gene 
+expression means and medians; for this simplified script, we will only use
+medians, which are easily downloaded from the GTEx website without needing 
+special access.
+
+```{r, message = FALSE}
+# Get names of tissues in alphabetical order
+# Alphabetical = the original alphabetical order, e.g. how they would appear
+# as file names in a directory, not according to the new names.
+abc_tissues <- c("ADP-SBC", "ADP-VSO", "ADRNGL", "ART-AOR", "ART-CRN",
+                 "ART-TB", "BLADDER", "BRN-AMY", "BRN-ACC", "BRN-CAU", 
+                 "BRN-CB-a", "BRN-CB-b", "BRN-CTX-b", "BRN-CTX-a", "BRN-HIPP", 
+                 "BRN-HYP", "BRN-NAC", "BRN-PUT", "BRN-SPC", "BRN-SN", "BREAST",
+                 "CELL-FB", "CELL-LYM", "CVX-ECT", "CVX-END", "CLN-SIG", 
+                 "CLN-TRN", "ESP-GEJ", "ESP-MCS", "ESP-MSL", "FLPTB", "HRT-AA", 
+                 "HRT-LV", "KDY-CTX", "KDY-MDL", "LIVER", "LUNG", "SALGL", 
+                 "MSC-SK", "NRV-TB", "OVARY", "PANCREAS", "BRN-PTRY", 
+                 "PROSTATE", "SKN-NSP", "SKN-SLL", "SIN-TIL", "SPLEEN", 
+                 "STOMACH", "TESTIS", "THYROID", "UTERUS", "VAGINA", "WHLBLD")
+
+# Get medians
+gtex_medians <- read.delim(gtex_file, skip = 2) %>%
+  mutate(Name = sub("\\.[0-9]+", "", Name))
+names(gtex_medians) <- c("Human_ID", "Human_Symbol", abc_tissues)
+gtex_medians <- gtex_medians %>%
+  mutate(Gene_Group = ifelse(Human_ID %in% all_hs_ids, "My Genes", 
+                             "All Other Genes"), .before = everything()) %>%
+  pivot_longer(4:ncol(.), names_to = "Tissue", values_to = "Median_TPM") %>%
+    mutate(System = factor(case_when(Tissue == "BRN-CB-b" ~ NA_character_,
+                                     Tissue == "BRN-CTX-b" ~ NA_character_,
+                                     # Remove brain replicates from this &
+                                     # Put all other brain tissues in CNS
+                                     grepl("BRN", Tissue) == TRUE ~ "CNS",
+                                     # Remove cell lines from this calculation
+                                     Tissue == "CELL-FB" ~ NA_character_,
+                                     Tissue == "CELL-LYM" ~ NA_character_,
+                                     TRUE ~ "Body")),
+         .after = "Tissue") %>%
+  # Calculate sum of median TPMs for each gene for brain vs. non-brain
+  group_by(Human_ID, System) %>%
+  mutate(System_Total = sum(Median_TPM), .after = "System") %>%
+  ungroup()
+
+# How many genes in GTEX data?
+gtex_medians %>% 
+  group_by(Gene_Group) %>% 
+  select(Human_ID) %>% 
+  unique() %>%
+  count()
+```
+
+We will also need to load in the GTEx metadata. This script is designed so that
+no one needs special access to GTEx to use it. For example, in the manuscript 
+we only compared males and females who were 55 years of age or older. However,
+exact ages are not available in the freely accessible GTEx data, only ranges.
+Here, we will compare participants 50+ and get age matches based on ranges.
+
+If you have access to the protected access GTEx data, use the file 
+"participant.tsv" to find participants 55 or older and age match them before
+proceeding. Code to do this can be found in the original `individual_gtex.R` 
+file, which processes data from the manuscript.
+
+```{r, message = FALSE}
+# Sample Attributes
+att <- read_delim(att_file, delim = "\t") %>%
+  select(c(1, 7)) %>%
+  rename(Sample_ID = "SAMPID", Tissue = "SMTSD", Participant_ID = ) %>%
+  filter(str_detect(Tissue, "Brain") | Tissue == "Pituitary") %>%
+  mutate(Sample_ID_Temp = Sample_ID) %>%
+  separate(col = Sample_ID_Temp, into = c("Temp1", "Temp2"), sep = "-") %>%
+  unite(col = Participant, c(Temp1, Temp2), sep = "-")
+
+pheno <- read_delim(pheno_file, delim = "\t") %>%
+  mutate(SEX = case_when(SEX == 1 ~ "Male", SEX == 2 ~ "Female", 
+                         TRUE ~ NA_character_)) %>%
+  select(-DTHHRDY)
+names(pheno) <- c("Participant", "Sex", "Age")
+
+# Merge dataframes
+pheno_att <- inner_join(pheno, att) %>%
+  mutate(Group = as.logical(Sex == "Female"),
+         Tissue = case_when(
+           Tissue == "Brain - Frontal Cortex (BA9)" ~ "Frontal_Cortex",
+           Tissue == "Brain - Cortex" ~ "Cortex",
+           Tissue == "Brain - Cerebellum" ~ "Cerebellum",
+           Tissue == "Brain - Cerebellar Hemisphere" ~ "Cerebellar_Hemisphere",
+           Tissue == "Brain - Caudate (basal ganglia)" ~ "Caudate",
+           Tissue == "Brain - Nucleus accumbens (basal ganglia)" ~ "Nucleus_Accumbens",
+           Tissue == "Brain - Putamen (basal ganglia)" ~ "Putamen",
+           Tissue == "Brain - Hypothalamus" ~ "Hypothalamus",
+           Tissue == "Brain - Spinal cord (cervical c-1)" ~ "Spinal_Cord_C1",
+           Tissue == "Brain - Hippocampus" ~ "Hippocampus",
+           Tissue == "Brain - Substantia nigra" ~ "Substantia_Nigra",
+           Tissue == "Brain - Frontal Cortex (BA9)" ~ "Frontal_Cortex",
+           Tissue == "Brain - Anterior cingulate cortex (BA24)" ~ "Anterior_Cingulate",
+           Tissue == "Brain - Amygdala" ~ "Amygdala",
+           TRUE ~ Tissue)) %>%
+  mutate(Sample_ID = str_to_upper(str_replace_all(Sample_ID, "-", "\\.")))
+
+```
+
+```{r, warning = FALSE}
+test <- read.delim("G:/Noctsol/gene_tpm_2017-06-05_v8_adipose_subcutaneous.gct.gz", skip = 2)
+
+
+test2 <- read.delim("G:/Noctsol/Downloads/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct.gz", 
+                   skip = 2) %>%
+  pivot_longer(cols = 3:ncol(.), names_to = "Tissue", values_to = "Mean_TPM") %>%
+  rename(Human_ID = Name, Human_Symbol = Description)
+```
+
+Next we need to load in the by-tissue TPM files. This will take a while if you
+are running it on a local computer and not a cluster.
+
+To do this, we will get a list of the files and then load them in separately.
+Then the list of lists will be transformed into a tidy dataframe.
+
+```{r, warning = FALSE}
+tissue_files <- list.files(path = file.path(tpm_folder), 
+                           pattern = "*gct.gz", full.names = TRUE)
+
+# Load files separately into environment
+list2env(envir = .GlobalEnv,
+         lapply(setNames(tissue_files, make.names(abc_tissues)), 
+                read.delim, skip = 2))
+
+# Create list of lists for easier transformation into data frame
+# Pivot each sub-list so that Sample IDs are in rows
+tissue_list <- list("Amygdala" = Amygdala, 
+                    "Anterior_Cingulate" = Anterior_Cingulate, 
+                    "Caudate" = Caudate, 
+                    "Cerebellar_Hemisphere" = Cerebellar_Hemisphere, 
+                    "Cerebellum" = Cerebellum, "Cortex" = Cortex, 
+                    "Frontal_Cortex" = Frontal_Cortex, 
+                    "Hippocampus" = Hippocampus, "Hypothalamus" = Hypothalamus, 
+                    "Nucleus_Accumbens" = Nucleus_Accumbens, 
+                    "Putamen" = Putamen, 
+                    "Spinal_Cord_C1" = Spinal_Cord_C1, 
+                    "Substantia_Nigra" = Substantia_Nigra,
+                    "Pituitary" = Pituitary) %>%
+  lapply(pivot_longer, -c(1:2), names_to = "Sample_ID", values_to = "TPM") %>%
+  map2(., names(.), ~cbind(.x, Tissue = .y)) %>%
+  lapply(mutate, 
+         Sample_ID = str_to_upper(str_replace_all(Sample_ID, "-", "\\.")),
+         ID_Temp = as.character(Sample_ID)) %>%
+  lapply(separate, col = ID_Temp, into = c("Tmp1", "Tmp2"), sep = "\\.") %>%
+  lapply(unite, col = Participant, c(Tmp1, Tmp2), sep = "-")
+
+# Create dataframe from modified tissue lists
+tissue_df <- Reduce(function(x, y) 
+  full_join(x, y), tissue_list)
+```
+
+Now that we have the tissue data loaded in, we know which samples have data for 
+the brain samples. We need to clean the metadata so the correct samples can be
+matched.
+
+```{r, message = FALSE}
+# The sample metadata (pt and att dataframes) indicate that there are samples
+# that aren't actually present in the data. 
+# E.g. the frontal cortex should have the sample GTEX-1117F-0011-R10a-SM-AHZ7F
+# corresponding to participant GTEX-1117F, but this sample is not present in 
+# the frontal cortex samples (or any other tissues of interest).
+
+# Join metadata and TPM dataframes by inner_join to get rid of samples that
+# don't actually exist
+all_df <- inner_join(pheno_att, tissue_df)
+
+# Get "new" metadata dataframe based only on samples that exist
+new_metadata <- all_df %>%
+  select(-c(Name, Description, TPM)) %>%
+  unique()
+```
+
+Because the individual tissue dataframes take up a lot of memory, we should 
+remove them after creating the final combined dataframe.
+
+```{r, message = FALSE}
+rm(tissue_list, "ADP.SBC", "ADP.VSO", "ADRNGL", "ART.AOR", "ART.CRN",
+                 "ART.TB", "BLADDER", "BRN.AMY", "BRN.ACC", "BRN.CAU", 
+                 "BRN.CB.a", "BRN.CB.b", "BRN.CTX.b", "BRN.CTX.a", "BRN.HIPP", 
+                 "BRN.HYP", "BRN.NAC", "BRN.PUT", "BRN.SPC", "BRN.SN", "BREAST",
+                 "CELL.FB", "CELL.LYM", "CVX.ECT", "CVX.END", "CLN.SIG", 
+                 "CLN.TRN", "ESP.GEJ", "ESP.MCS", "ESP.MSL", "FLPTB", "HRT.AA", 
+                 "HRT.LV", "KDY.CTX", "KDY.MDL", "LIVER", "LUNG", "SALGL", 
+                 "MSC.SK", "NRV.TB", "OVARY", "PANCREAS", "BRN.PTRY", 
+                 "PROSTATE", "SKN.NSP", "SKN.SLL", "SIN.TIL", "SPLEEN", 
+                 "STOMACH", "TESTIS", "THYROID", "UTERUS", "VAGINA", "WHLBLD",
+   tissue_df)
+gc() # Clear unused memory
+```
+
+### Age-Matching Samples
+Age matching will be performed with the MatchIt package.
+
+```{r, message = FALSE}
+# Age-match brain samples for males and females 50+
+matched <- new_metadata %>% 
+  filter(Age %in% c("50-59", "60-69", "70-79")) %>%
+  matchit(Group ~ Tissue + Age, data = ., 
+          method = "nearest", exact = c("Age", "Tissue"))
+
+# New dataframe after matching
+matched_df <- match.data(matched)[1:7] %>%
+  mutate(Matched = TRUE)
+
+# How many samples age 50+ per tissue and sex? BEFORE MATCHING
+before_match <- new_metadata %>% 
+  filter(Age %in% c("50-59", "60-69", "70-79")) %>%
+  group_by(Tissue, Sex) %>%
+  summarize(Before_Match = n())
+
+# How many samples age 50+ per tissue and sex? AFTER MATCHING
+after_match <- matched_df %>%
+  group_by(Tissue, Sex) %>%
+  summarize(After_Match = n())
+
+# Join w/ TPM values
+tpm <- matched_df %>% inner_join(., all_df)
+
+# Verify that the number of samples stayed the same
+after_match_verify <- tpm %>%
+  select(Participant, Sex, Age, Matched, Tissue) %>%
+  unique() %>%
+  group_by(Tissue, Sex) %>%
+  summarize(After_Match_Verify = n())
+```
+
+Join summary dataframes and verify that the number of samples is the same for 
+both males and females for each tissue.
+
+```{r, message = FALSE}
+match_summary <- Reduce(function(x, y) 
+  full_join(x, y), list(before_match, after_match, after_match_verify))
+match_summary
+```
+
+Lastly we will get a dataframe that is set up for performing statistical analyses.
+
+```{r, message = FALSE}
+# Final TPM dataframe for stats
+final_bysex_tpm <- tpm %>%
+  rename(Human_ID = "Name", Human_Symbol = "Description") %>%
+  mutate(Human_ID = sub("\\.[0-9]+", "", Human_ID)) %>%
+  mutate(Tissue = case_when(
+    Tissue == "Frontal_Cortex" ~ "BRN-CTX-a",
+    Tissue == "Cerebellar_Hemisphere" ~ "BRN-CB-a",
+    Tissue == "Caudate" ~ "BRN-CAU",
+    Tissue == "Nucleus_Accumbens" ~ "BRN-NAC",
+    Tissue == "Putamen" ~ "BRN-PUT",
+    Tissue == "Hypothalamus" ~ "BRN-HYP",
+    Tissue == "Spinal_Cord_C1" ~ "BRN-SPC",
+    Tissue == "Hippocampus" ~ "BRN-HIPP",
+    Tissue == "Substantia_Nigra" ~ "BRN-SN",
+    Tissue == "Anterior_Cingulate" ~ "BRN-ACC",
+    Tissue == "Amygdala" ~ "BRN-AMY",
+    Tissue == "Pituitary" ~ "BRN-PTRY",
+    TRUE ~ Tissue))
+```
+
+## Statistical Analyses for Sex:Tissue Effect
+We will use Type III ANOVAs to test if there is an effect of Tissue, Sex, or a 
+Sex:Tissue interaction for expression of each gene of interest. Significant
+effects or interactions will then be analyzed with post-hoc Tukey's tests.
+
+### Overall ANOVAs
+```{r, message = FALSE}
+# Overall ANOVAs
+bysex_tissue_anovas_temp <- final_bysex_tpm %>%
+  filter(Tissue != "Cerebellum", Tissue != "Cortex", 
+         Human_ID %in% all_hs_ids) %>%
+  unique() %>%
+  group_by(Human_Symbol) %>%
+  anova_test(TPM ~ Sex + Tissue + Sex:Tissue, type = "III") %>%
+  as.data.frame() %>%
+  rename(Sig_p05 = "p<.05")
+
+bysex_tissue_anovas <- gtex_medians %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., bysex_tissue_anovas_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
+```
+
+We can then pull out the genes that have significant main effects or interactions.
+
+```{r}
+# Sex main effect
+genes_sex <- bysex_tissue_anovas %>% 
+  filter(Effect == "Sex", Sig_p05 == "*") %>% 
+  pull(Human_Symbol) %>%
+  unique()
+
+# Tissue main effect
+genes_tissue <- bysex_tissue_anovas %>% 
+  filter(Effect == "Tissue", Sig_p05 == "*")  %>%
+  pull(Human_Symbol) %>%
+  unique()
+
+# Sex:Tissue interaction
+genes_inter <- bysex_tissue_anovas %>% 
+  filter(Effect == "Sex:Tissue", Sig_p05 == "*") %>% 
+  pull(Human_Symbol) %>%
+  unique()
+
+# How many genes have significant main effects or interactions?
+print(paste(length(genes_sex), "genes have a significant main effect of Sex"))
+print(paste(length(genes_tissue), 
+            "genes have a significant main effect of Tissue"))
+print(paste(length(genes_inter), 
+            "genes have a significant Sex:Tissue interaction"))
+```
+
+The final CSV will save the names of the genes that have significant test
+results.
+
+### Post-hoc Analyses
+#### Sex
+Since Sex has only 2 groups, we don't need to perform post-hoc Tukey's tests.
+However, we can still determine which sex has higher expression for each gene.
+
+```{r, message = FALSE}
+# Genes with higher expression in females
+female_higher <- final_bysex_tpm %>%
+  filter(Human_Symbol %in% genes_sex) %>%
+  unique() %>%
+  group_by(Human_Symbol, Sex) %>%
+  summarize(Mean_TPM = mean(TPM))%>%
+  pivot_wider(names_from = Sex, values_from = Mean_TPM) %>%
+  mutate(Higher_Sex = case_when(Female > Male ~ "Female", 
+                                Male > Female ~ "Male")) %>%
+  filter(Higher_Sex == "Female") %>%
+  pull(Human_Symbol) %>%
+  unique()
+print(paste("Of the", length(genes_sex), "with a significant main effect of 
+            Sex,", length(female_higher), "have higher expression in females"))
+
+# Use that vector of genes to label a summary dataframe
+sex_summary_temp <- final_bysex_tpm %>%
+  filter(Human_Symbol %in% genes_sex) %>%
+  unique() %>%
+  group_by(Human_Symbol, Sex) %>%
+  summarize(Mean_TPM = mean(TPM), SD_TPM = sd(TPM)) %>%
+  mutate(Higher_Sex = case_when(Human_Symbol %in% female_higher ~ "Female",
+                                TRUE ~ "Male")) %>%
+  pivot_wider(names_from = Sex, values_from = c(Mean_TPM, SD_TPM))
+
+sex_summary <- gtex_medians %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., sex_summary_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
+```
+
+#### Tissue
+Post-hoc Tukey tests can be performed for each gene with significant main effect
+of Tissue. For this example there are too many signficant results to summarize
+here. Results will be in the final CSV file that is saved.
+
+```{r, message = FALSE}
+tukey_tissue_temp <- final_bysex_tpm %>%
+  filter(Tissue != "Cerebellum", Tissue != "Cortex") %>%
+  mutate(Tissue = gsub("-", "_", Tissue)) %>%
+  filter(Human_Symbol %in% genes_tissue | Human_Symbol %in% genes_inter) %>%
+  unique() %>%
+  group_by(Human_Symbol) %>%
+  tukey_hsd(TPM ~ Tissue) %>%
+  relocate(Human_Symbol, .before = term) %>%
+  as.data.frame()
+
+tukey_tissue <- gtex_medians %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., tukey_tissue_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
+```
+
+###### Get CLDs for the Tissue Effect
+We can get compact letter displays (CLDs) for the tissue data. This summarizes
+the similarities and differences between the pairwise comparisons from Tukey's
+tests using letters.
+
+The tissue(s) with the highest expression of a gene will be labeled "a", the 2nd
+highest will be "b", and so forth. Tissues can have multiple letter labels, which
+indicate whether they are significantly different from another tissue in their
+expression. Please see the manuscript for a more detailed explanation.
+
+Results will be saved in the final CSV file.
+
+```{r, message = FALSE}
+# Load specific packages
+library(emmeans)
+library(multcomp)
+
+# Get compact letter display (CLD) for tissue data
+# First create function
+get_cld <- function(gene) {
+  final_bysex_tpm %>%
+    filter(Human_Symbol == gene,
+           Tissue != "Cerebellum", Tissue != "Cortex") %>%
+    unique() %>%
+    mutate(Tissue = as.factor(Tissue)) %>%
+    lm(TPM ~ Tissue, data = .) %>%
+    emmeans(., pairwise ~ "Tissue", adjust = "tukey") %>%
+    cld(., reversed = TRUE)
+}
+
+# Create empty list
+cld_list <- list()
+
+# Get CLD for each gene and populate list
+for (i in 1:length(genes_tissue)) {
+  cld_list[[i]] <- get_cld(genes_tissue[i]) %>%
+    as.data.frame() %>%
+    arrange(Tissue) %>%
+    mutate(Human_Gene_Symbol = genes_tissue[i], .before = everything())
+}
+
+# Convert list to dataframe
+cld_df_temp <- Reduce(function(x, y) 
+  full_join(x, y), cld_list) %>%
+  mutate(Group = str_trim(.group), .keep = "unused") %>%
+  mutate(Group = gsub("1", "a", Group),
+         Group = gsub("2", "b", Group),
+         Group = gsub("3", "c", Group),
+         Group = gsub("4", "d", Group),
+         Group = gsub("5", "e", Group),
+         Group = gsub("6", "f", Group),
+         Group = gsub("7", "g", Group),
+         Group = gsub("8", "h", Group),
+         Group = gsub("9", "i", Group))
+
+cld_df <- gtex_medians %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., cld_df_temp, by = c("Human_Symbol" = "Human_Gene_Symbol")) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
+
+# Unload packages that don't play nicely with tidyverse
+detach("package:multcomp", unload = TRUE)
+detach("package:TH.data", unload = TRUE)
+detach("package:MASS", unload = TRUE)
+```
+
+Using the CLD data, we can also find the brain regions that have the highest
+expression.
+
+```{r, message = FALSE}
+# Get regions of highest expression
+temp_df <- cld_df %>%
+  select(Human_Symbol, Tissue, Group) %>%
+  filter(grepl("a", Group)) %>%
+  pivot_wider(names_from = Tissue, values_from = Group)
+
+for (cl in names(test)[2:ncol(temp_df)]) {
+  set(temp_df, j = cl, value = fifelse(temp_df[[cl]]==0, NA_character_, cl))
+}
+
+highest_region_df <- cld_df %>%
+  select(Human_Symbol) %>%
+  unique() %>%
+  mutate(Highest_CNS_Regions = "")
+
+for (i in 1:nrow(temp_df)) {
+  highest_region_df[i, 2] <- temp_df %>%
+    .[i, ] %>%
+    .[ , apply(., 2, function(x) !any(is.na(x)))] %>%
+    unite("Highest_CNS_Regions", 2:ncol(.), remove = TRUE, sep = ", ") %>%
+    select(2)
+}
+```
+
+#### Sex:Tissue
+Post-hoc Tukey tests for each gene with significant Sex:Tissue interaction:
+
+```{r, message = FALSE}
+tukey_sex_tissue_temp <- final_bysex_tpm %>%
+  filter(Tissue != "Cerebellum", Tissue != "Cortex") %>%
+  mutate(Tissue = gsub("-", "_", Tissue)) %>%
+  filter(Human_Symbol %in% genes_inter) %>%
+  unique() %>%
+  group_by(Human_Symbol, Tissue) %>%
+  tukey_hsd(TPM ~ Sex) %>%
+  relocate(Human_Symbol, .before = everything()) %>%
+  as.data.frame()
+
+tukey_sex_tissue <- gtex_medians %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
+  right_join(., tukey_sex_tissue_temp) %>%
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
+
+# Use vector of genes to label a summary dataframe
+sex_tissue_summary <- final_bysex_tpm %>%
+  filter(Human_Symbol %in% genes_inter) %>%
+  unique() %>%
+  mutate(Tissue = gsub("-", "_", Tissue)) %>%
+  group_by(Human_Symbol, Tissue, Sex) %>%
+  summarize(Mean_TPM = mean(TPM), SD_TPM = sd(TPM)) %>%
+  mutate(Higher_Sex = case_when(Human_Symbol %in% female_higher ~ "Female",
+                                TRUE ~ "Male")) %>%
+  pivot_wider(names_from = Sex, values_from = c(Mean_TPM, SD_TPM)) %>%
+  full_join(tukey_sex_tissue) %>%
+  filter(p.adj.signif != "ns") %>%
+  droplevels() %>%
+  relocate(Gene_Group, Human_ID, .before = everything()) %>%
+  select(1:9)
+```
+
+## Brain Specificity
+Now we will calculate "brain specificity" scores (log2 FC of CNS vs. Body 
+Totals). You can also apply an expression filter here, e.g. TPM > 1 in all
+tissues.
+
+Some of the genes may be removed after filtering so we can check on that.
+
+```{r}
+brain_spec_firstpass <- gtex_medians %>%
+  filter(!is.na(System)) %>%
+  group_by(Human_ID) %>%
+  mutate(Grand_Tissue_Mean_Median = mean(Median_TPM)) %>%
+  select(Human_ID, Human_Symbol, System, System_Total,
+         Grand_Tissue_Mean_Median, Gene_Group) %>%
+  unique() %>%
+  pivot_wider(names_from = System, values_from = System_Total) %>%
+  mutate(BrainSpec = log2((CNS)/(Body))) %>%
+  ungroup()
+
+# Filter out genes based on mean of the medians over all tissues
+brain_spec <- brain_spec_firstpass %>% filter(Grand_Tissue_Mean_Median > 0)
+filter_genes <- brain_spec %>% pull(Human_ID) %>% unique()
+
+# Count genes before and after filtering
+# All genes
+print(paste((brain_spec_firstpass %>% group_by(Human_ID) %>% count() %>% nrow()),
+            "genes before filtering"))
+print(paste((brain_spec %>% group_by(Human_ID) %>% count() %>% nrow()),
+            "genes after filtering"))
+# "My Genes"
+print(paste((brain_spec_firstpass %>% filter(Gene_Group == "My Genes") %>% 
+  group_by(Human_ID) %>% count() %>% nrow()), "of MY genes before filtering"))
+print(paste((brain_spec %>% filter(Gene_Group == "My Genes") %>% 
+  group_by(Human_ID) %>% count() %>% nrow()), "of MY genes after filtering"))
+```
+
+Lastly, the dataframes will be joined and new columns will be added for plotting.
+This includes the means of the median values for plotting. We can also check
+how many genes have higher expression in the brain than the body.
+
+```{r, message = FALSE}
+# Join dataframes and add new columns for plotting later
+gtex_spec <- Reduce(full_join, list(gtex_medians, brain_spec_firstpass)) %>%
+  filter(Human_ID %in% filter_genes)
+
+higher_genes <- gtex_spec %>%
+  filter(Gene_Group != "All Other Genes", BrainSpec > 0) %>%
+  group_by(Gene_Group) %>%
+  select(Human_ID, BrainSpec) %>%
+  unique() %>%
+  count() %>%
+  pull(n)
+print(paste(higher_genes, "genes have higher expression in the brain"))
+```
+
+### Statistical Analyses
+Wilcoxon rank-sum tests can be used to check whether our genes are more specific
+to the brain than than all other human genes.
+
+Statistics:
+```{r, message = FALSE}
+bs_stats <- gtex_spec %>%
+  select(Human_ID, System, BrainSpec, Gene_Group) %>%
+  unique() %>%
+  filter(System == "CNS", BrainSpec != -Inf, BrainSpec != Inf) %>%
+  wilcox_test(BrainSpec ~ Gene_Group)
+bs_stats
+```
+
+Medians:
+```{r, message = FALSE}
+summary_brainspec <- gtex_spec %>%
+  select(Human_Symbol, System, BrainSpec, Gene_Group) %>%
+  unique() %>%
+  filter(System == "CNS", BrainSpec != -Inf, BrainSpec != Inf) %>%
+  group_by(Gene_Group) %>%
+  summarize(Median_BrainSpec = median(BrainSpec))
+summary_brainspec
+```
+
+### Plots
+#### Brain Specificity
+```{r, fig.width = 4.5, fig.height = 4.5}
+bs_plot <- brain_spec %>%
+  select(Human_ID, Human_Symbol, BrainSpec, Gene_Group) %>%
+  unique() %>%
+  filter(BrainSpec != -Inf, BrainSpec != Inf) %>%
+  ggplot(aes(x = Gene_Group, y = BrainSpec, fill = Gene_Group)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = c(seq(-16, -2, 2), seq(2, 12, 2)), 
+             linetype = "solid", color = "grey85") +
+  geom_hline(yintercept = c(seq(-16, -4, 4), seq(4, 12, 4)), 
+             linetype = "solid", color = "grey65") +
+  geom_violin(width = 0.8) +  
+  geom_boxplot(fill = "white", color = "black", width = 0.18, 
+               outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
+               outlier.fill = "black", outlier.alpha = 0.6) +
+  labs(x = "", y = expression("Brain Specificity (Log "[2]*" Fold Change)"),
+       title = "Brain Specificity (GTEx)\n") +
+  scale_y_continuous(limits = c(-16, 12), breaks = seq(-16, 12, 4), 
+                     expand = c(0, 0.00001)) +
+  scale_x_discrete(expand = c(0, 0.55)) +
+  scale_fill_manual(values = c("#44AA99", "#C148AD", "grey80")) +
+  theme(legend.position = "none", axis.ticks.x = element_blank(), 
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 13),
+        axis.title = element_text(size = 14),
+        plot.title = element_text(face = "bold"),
+        panel.border = element_blank(),
+        axis.line = element_line(color = "black"))
+
+if (bs_stats$p < 0.05){
+  bs_plot <- bs_plot + annotate(geom = "text", x = 1.5, y = 6,
+                                label = paste("Significant\np = ", bs_stats$p))
+} else {
+  bs_plot <- bs_plot + annotate(geom = "text", x = 1.5, y = 6,
+                                label = paste("Not significant\np = ",
+                                              bs_stats$p))
+}
+
+bs_plot
+```
+#### Expression of Individual Genes Across Tissues
+
+Here is a custom function for plotting specific genes of interest. 
+
+```{r, message = FALSE}
+vert_gene_plot <- function(gene_name, x_lim, br) {
+  gtex_spec %>%
+    mutate(System = fct_rev(case_when(
+      Tissue == "BRN-CB-b" | Tissue == "BRN-CTX-b" ~ NA_character_,
+      Tissue == "CELL-FB" | Tissue == "CELL-LYM" ~ NA_character_,
+      TRUE ~ as.character(System)))) %>%
+    filter(Human_Symbol == gene_name, !is.na(System)) %>%
+    ggplot(aes(x = fct_rev(Tissue), color = System)) +
+    geom_point(aes(y = Median_TPM), shape = 4, stroke = 1.5, size = 3) +
+    scale_x_discrete(expand = c(0, 1.1)) +
+    scale_color_manual(values = c("#9359CD", "grey60")) +
+    labs(x = "Tissue", y = "Median TPM", fill = "System") +
+    theme(legend.title.align = 0.5, legend.position = "none",
+          legend.margin = margin(-1.25, 0, 0, 0, "cm"),
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.grid.major.x = element_line(color = "grey60"),
+          axis.text.y = element_text(size = 7.25),
+          axis.title.x = element_text(size = 11, color = "white"),
+          axis.text.x = element_text(size = 11),
+          plot.margin = margin(0.25, 0.25, 0.25, 0.25, "cm"),
+          strip.text = element_text(size = 11)) +
+    coord_flip() +
+    facet_wrap(~ Human_Symbol, ncol = 4, nrow = 1, scales = "free_y")
+}
+```
+
+Apply the function on genes that seem interesting to you, like below. The 
+example gene, _KIF5A_, has higher expression in the cortex than other regions 
+of the brain and has higher expression in the brain than the rest of the body.
+
+```{r, fig.width = 4, fig.height = 5.5}
+vert_gene_plot("KIF5A")
+```
+
+## Save Dataframes
+Finally, we will save all of the dataframes from these analyses, including:
+
+* Sex, Tissue, Sex:Tissue ANOVA results
+* Tissue effect post-hoc results
+* Tissue effect CLD results
+* Sex:Tissue interaction results
+* Brain specificity results for each gene, including the median TPM in each 
+tissue and the overall sum of the median expression across all brain and body
+tissues
+
+```{r}
+write.csv(bysex_tissue_anovas, anova_file)
+write.csv(tukey_tissue, tissue_effect_file)
+write.csv(cld_df, tissue_cld_file)
+write.csv(tukey_sex_tissue, interaction_file)
+write.csv(my_gtex_results, brain_spec_file)
+```
+
+## Session Info
+
+```{r}
+sessionInfo()

@@ -1,0 +1,924 @@
+---
+title: "Streamlined Conservation"
+output: html_document
+author: Annika Vannan, avannan@asu.edu
+date: 12/18/22
+---
+
+## Set-Up
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(dplyr.inform = FALSE)
+```
+
+### Load Libraries
+Make sure you have the following libraries downloaded before using this script:
+
+* tidyverse
+* readxl
+* ggplot2
+* ggpubr
+* biomaRt
+* org.Mm.eg.db
+* org.Rn.eg.db
+* rstatix
+
+```{r, warning = FALSE, message = FALSE, error = FALSE}
+library(tidyverse); library(rlist); library(readxl) # Data manipulation
+library(ggplot2); library(ggpubr) # Plots and visualizations
+library(biomaRt); library(org.Mm.eg.db); library(org.Rn.eg.db) # Gene annotations
+library(rstatix) # Statistics
+
+# Change the tidyverse functions
+select <- dplyr::select
+filter <- dplyr::filter
+rename <- dplyr::rename
+arrange <- dplyr::arrange
+
+options(dplyr.summarise.inform = FALSE)
+```
+
+### Setting Other Variables
+Users must alter the following variables before running this script on their own
+data. This includes where the output CSV files should be written to, and the
+**mouse or rat genes** that will be assessed (as ENSEMBL IDs). This script is
+written to take **mouse or rat genes** as a character vector, but can be altered 
+to take the gene names directly from an Excel or CSV file.
+
+In this example, we will use a small number of genes for ease of computation and
+interpretation. For this reason, most of the results will be statistically
+significant. With a larger, real dataset with your own genes of interest,
+you are likely to get more meaningful results.
+
+```{r}
+# User should alter these variables as necessary
+
+# Where you want the final conservation CSV file to be written
+cons_csv_file <- "C:/Users/Annika/Documents/cons_file.csv"
+
+# Location of Cardoso-Moreira file (AS EXCEL FILE)
+# "Developmental gene expression differences between humans & mammalian models"
+# Cardoso-Moriera et al. (2020)
+# Table S3A. Comparison of brain temporal trajectories
+cm_file <- paste0("D:/GitHub Repositories/RodentAddiction/external_downloads/1-s2.0-S2211124720312973-mmc4.xlsx")
+
+# Set rodent species to either "mouse" or "rat" depending on gene list
+rodent_species <- "mouse"
+
+# List of mouse or rat genes; use ENSEMBL IDs
+# Example here is for mouse IDs
+rodent_ids <- c("ENSMUSG00000030357", "ENSMUSG00000029916", "ENSMUSG00000021182", 
+                "ENSMUSG00000026728", "ENSMUSG00000013523", "ENSMUSG00000023809", 
+                "ENSMUSG00000040543", "ENSMUSG00000022442", "ENSMUSG00000054814", 
+                "ENSMUSG00000014226", "ENSMUSG00000037868", "ENSMUSG00000004894", 
+                "ENSMUSG00000019890", "ENSMUSG00000036478", "ENSMUSG00000020205", 
+                "ENSMUSG00000032297", "ENSMUSG00000026678", "ENSMUSG00000026344", 
+                "ENSMUSG00000074657", "ENSMUSG00000034640", "ENSMUSG00000033910", 
+                "ENSMUSG00000021647", "ENSMUSG00000019874", "ENSMUSG00000025902", 
+                "ENSMUSG00000060802", "ENSMUSG00000023019", "ENSMUSG00000024661", 
+                "ENSMUSG00000032517", "ENSMUSG00000050022", "ENSMUSG00000038894", 
+                "ENSMUSG00000041607")
+```
+
+### Optional Parameters
+These parameters are optional to change and make the graphs prettier and the
+stat outputs easier to read.
+
+```{r}
+# Reduce chances of scientific notation
+options(scipen = 9999)
+
+# Update and set ggplot theme globally
+new_theme <- theme_bw(base_size = 14) %+replace%
+  theme(axis.text = element_text(color = "black"),
+        plot.title = element_text(hjust = 0.5))
+theme_set(new_theme)
+```
+
+## Use BiomaRt
+Next we will need to download the April 2022 and January 2020 marts from 
+ENSEMBL. The latter is the most recent version that contains dN/dS information.
+We need to get the marts for mouse, rat, and human, regardless of whether our 
+genes of interest come from mouse or rat. This is because the script is designed
+to assess both the mouse and rat versions of your genes.
+
+```{r, warning = FALSE}
+### NEWER MARTS ----------
+# These are currently set to April 2022; remove "host" argument if you want the newest
+
+# Human (GRCh38.p13)
+grch38 <- useEnsembl("ensembl", dataset = "hsapiens_gene_ensembl", 
+                     host = "https://apr2022.archive.ensembl.org")
+# Mouse (GRCm39)
+grcm39 <- useEnsembl(biomart = "ensembl", dataset = "mmusculus_gene_ensembl",
+                     host = "https://apr2022.archive.ensembl.org")
+# Rat (mRatBN7.2)
+mRatBN7.2 <- useEnsembl("ensembl", dataset = "rnorvegicus_gene_ensembl", 
+                        host = "https://apr2022.archive.ensembl.org")
+
+
+### OLDER MART FOR dN/dS (JANUARY 2020) ----------
+# Human (Ensembl release 99)
+hs_ens99 <- useMart("ensembl", dataset = "hsapiens_gene_ensembl", 
+                    host = "https://jan2020.archive.ensembl.org")
+
+```
+
+### Get Human Orthologs
+Next we use these marts to get the human orthologs for our genes, as well as the
+orthologs for either mouse (if rat genes were used as input) or rat (if mouse
+genes are used as input).
+
+```{r, message = FALSE}
+# Get dataframe with all relevant mouse or rat info
+if (rodent_species == "mouse") {
+  mouse_ids = rodent_ids
+  rodent_bm <- getBM(attributes = c("external_gene_name", # Gene symbol
+                                    "ensembl_gene_id", # Mouse ENSEMBL
+                                    "rnorvegicus_homolog_ensembl_gene", # Rat
+                                    "hsapiens_homolog_ensembl_gene"), # Human
+                     filter = "ensembl_gene_id", 
+                     values = rodent_ids,
+                     mart = grcm39) %>%
+    rename(BM_Gene_Name = external_gene_name,
+           Mouse_ID = ensembl_gene_id,
+           Rat_ID = rnorvegicus_homolog_ensembl_gene,
+           Human_ID = hsapiens_homolog_ensembl_gene) %>%
+    mutate(across(everything(), function(x) na_if(x, "")),
+           Has_Rat_Hom = case_when(!is.na(Rat_ID) ~ "Yes",
+                                   TRUE ~ "No"),
+           Has_Human_Hom = case_when(!is.na(Human_ID) ~ "Yes",
+                                     TRUE ~ "No"))
+  
+  # Extract human and rat orthologs
+  human_ids <- rodent_bm %>% pull(Human_ID)
+  rat_ids <- rodent_bm %>% pull(Rat_ID)
+  
+  # Rename mouse
+  mouse_ids <- rodent_ids
+  
+  # How many genes do or do not have human or rat orthologs?
+  # Human
+  has_human_homolog <- length(rodent_bm %>% filter(Has_Human_Hom == "Yes") %>% pull(Mouse_ID))
+  no_human_homolog <- length(rodent_bm %>% filter(Has_Human_Hom == "No") %>% pull(Mouse_ID))
+  message(paste("Mouse genes with a human ortholog:", has_human_homolog))
+  message(paste("Mouse genes without a human ortholog:", no_human_homolog))
+  # Rat
+  has_rat_homolog <- length(rodent_bm %>% filter(Has_Rat_Hom == "Yes") %>% pull(Mouse_ID))
+  no_rat_homolog <- length(rodent_bm %>% filter(Has_Rat_Hom == "No") %>% pull(Mouse_ID))
+  message(paste("Mouse genes with a rat ortholog:", has_rat_homolog))
+  message(paste("Mouse genes without a rat ortholog:", no_rat_homolog))
+  
+} else if (rodent_species == "rat") {
+  rat_ids = rodent_ids
+  rodent_bm <- getBM(attributes = c("external_gene_name", # Gene symbol
+                                    "ensembl_gene_id", # Rat ENSEMBL
+                                    "mmusculus_homolog_ensembl_gene", # Mouse
+                                    "hsapiens_homolog_ensembl_gene"), # Human
+                     filter = "ensembl_gene_id", 
+                     values = rodent_ids,
+                     mart = mRatBN7.2) %>%
+    rename(BM_Gene_Name = external_gene_name,
+           Rat_ID = ensembl_gene_id,
+           Mouse_ID = mmusculus_homolog_ensembl_gene,
+           Human_ID = hsapiens_homolog_ensembl_gene) %>%
+    mutate(across(everything(), function(x) na_if(x, "")),
+           Has_Mouse_Hom = case_when(!is.na(Mouse_ID) ~ "Yes",
+                                     TRUE ~ "No"),
+           Has_Human_Hom = case_when(!is.na(Human_ID) ~ "Yes",
+                                     TRUE ~ "No"))
+  
+  # Extract human and mouse orthologs
+  human_ids <- rodent_bm %>% pull(Human_ID)
+  mouse_ids <- rodent_bm %>% pull(Mouse_ID)
+  
+  # Rename rat
+  rat_ids <- rodent_ids
+  
+  # How many genes do or do not have human or mouse orthologs?
+  # Human
+  has_human_homolog <- length(rodent_bm %>% filter(Has_Human_Hom == "Yes") %>% pull(Mouse_ID))
+  no_human_homolog <- length(rodent_bm %>% filter(Has_Human_Hom == "No") %>% pull(Mouse_ID))
+  message(paste("Rat genes with a human ortholog:", has_human_homolog))
+  message(paste("Rat genes without a human ortholog:", no_human_homolog))
+  # Rat
+  has_mouse_homolog <- length(rodent_bm %>% filter(Has_Mouse_Hom == "Yes") %>% pull(Mouse_ID))
+  no_mouse_homolog <- length(rodent_bm %>% filter(Has_Mouse_Hom == "No") %>% pull(Mouse_ID))
+  message(paste("Rat genes with a rat ortholog:", has_mouse_homolog))
+  message(paste("Rat genes without a rat ortholog:", no_mouse_homolog))
+} else {
+  print("Error")
+}
+```
+
+You now have human IDs that are orthologous to the rodent IDs, which can be
+used to get conservation and gene expression information.
+
+## Sequence Similarity
+First we will compare sequence similarity between our input genes (as both mouse
+and rat genes) compared to the human orthologs. Don't worry about looking at the
+output dataframe at this stage - we will save all of the information together in
+a single CSV file later.
+
+```{r, warning = FALSE, message = FALSE}
+# Get sequence similarity data from newer version of Ensembl using human IDs
+new_ortho <- getBM(attributes = c("external_gene_name", # Gene symbol
+                                  "ensembl_gene_id", # Human ENSEMBL
+                                  "mmusculus_homolog_ensembl_gene", # Mouse ID
+                                  "rnorvegicus_homolog_ensembl_gene", # Rat ID
+                                  # Mouse homology
+                                  "mmusculus_homolog_subtype",
+                                  "mmusculus_homolog_orthology_type",
+                                  "mmusculus_homolog_perc_id",
+                                  "mmusculus_homolog_perc_id_r1",
+                                  "mmusculus_homolog_orthology_confidence",
+                                  # Rat homology
+                                  "rnorvegicus_homolog_subtype",
+                                  "rnorvegicus_homolog_orthology_type",
+                                  "rnorvegicus_homolog_perc_id",
+                                  "rnorvegicus_homolog_perc_id_r1",
+                                  "rnorvegicus_homolog_orthology_confidence"),
+                   mart = grch38) %>%
+  rename(BM_Human_Gene_Name = external_gene_name,
+         Human_ID = ensembl_gene_id,
+         Mouse_ID = mmusculus_homolog_ensembl_gene,
+         Rat_ID = rnorvegicus_homolog_ensembl_gene,
+         Mouse_Ortho_Subtype = mmusculus_homolog_subtype,
+         Mouse_Ortho_Type = mmusculus_homolog_orthology_type,
+         MouseToHuman_PercMatch = mmusculus_homolog_perc_id,
+         HumanToMouse_PercMatch = mmusculus_homolog_perc_id_r1,
+         Mouse_Ortho_Conf = mmusculus_homolog_orthology_confidence,
+         Rat_Ortho_Subtype = rnorvegicus_homolog_subtype,
+         Rat_Ortho_Type = rnorvegicus_homolog_orthology_type,
+         RatToHuman_PercMatch = rnorvegicus_homolog_perc_id,
+         HumanToRat_PercMatch = rnorvegicus_homolog_perc_id_r1,
+         Rat_Ortho_Conf = rnorvegicus_homolog_orthology_confidence) %>%
+  mutate(across(everything(), function(x) na_if(x, "NaN"))) %>%
+  mutate(across(everything(), function(x) na_if(x, "")))
+
+# Separate into mouse or rat information
+if (rodent_species == "mouse") {
+  new_mouse_ortho <- new_ortho %>%
+    select(-contains("Rat")) %>%
+    unique()
+} else if (rodent_species == "rat") {
+  new_rat_ortho <- new_ortho %>%
+    select(-contains("Mouse")) %>%
+    unique()
+}
+
+# Separate by mouse and rat
+new_mouse_ortho <- new_ortho %>%
+  select(-contains("Rat")) %>%
+  unique() %>%
+  mutate(Gene_Group = fct_relevel(ifelse(
+    Human_ID %in% human_ids & Mouse_ID %in% mouse_ids, 
+    "My Genes", "All Other Orthologs"),
+    levels = c("My Genes", "All Other Orthologs")))
+
+new_rat_ortho <- new_ortho %>%
+  select(-contains("Mouse")) %>%
+  unique() %>%
+  mutate(Gene_Group = fct_relevel(ifelse(
+    Human_ID %in% human_ids & Rat_ID %in% rat_ids, 
+    "My Genes", "All Other Orthologs"),
+    levels = c("My Genes", "All Other Orthologs")))
+
+# Join dataframes for reference later
+full_new_ortho <- Reduce(function(x, y) 
+  full_join(x, y), list(new_mouse_ortho, new_rat_ortho)) %>%
+  relocate(Gene_Group, .before = everything()) %>%
+  unique() %>%
+  select(-Mouse_Ortho_Subtype, -Rat_Ortho_Subtype)
+```
+### Statistics
+Then we perform statistics (Wilcoxon rank-sum tests) to compare the sequence
+similarity between our genes/orthologs and all other known orthologs.
+
+```{r, message = FALSE}
+# Stats comparing each dataset to the ones in no datasets
+stat_mouse_perc <- new_mouse_ortho %>%
+  filter(!is.na(MouseToHuman_PercMatch)) %>%
+  wilcox_test(MouseToHuman_PercMatch ~ Gene_Group) %>%
+  filter(group2 == "All Other Orthologs") %>%
+  rename(Comparison = ".y.")
+stat_rat_perc <- new_rat_ortho %>%
+  filter(!is.na(RatToHuman_PercMatch)) %>%
+  wilcox_test(RatToHuman_PercMatch ~ Gene_Group) %>%
+  filter(group2 == "All Other Orthologs") %>%
+  rename(Comparison = ".y.")
+
+# Medians
+mouse_perc_medians <- new_mouse_ortho %>%
+  filter(!is.na(MouseToHuman_PercMatch)) %>%
+  group_by(Gene_Group) %>%
+  summarize(MouseToHuman_PercMatch_Median = median(MouseToHuman_PercMatch))
+rat_perc_medians <- new_rat_ortho %>%
+  filter(!is.na(RatToHuman_PercMatch)) %>%
+  group_by(Gene_Group) %>%
+  summarize(RatToHuman_PercMatch_Median = median(RatToHuman_PercMatch))
+
+# View stats and medians
+stat_perc <- full_join(stat_mouse_perc, stat_rat_perc)
+medians_perc <- full_join(mouse_perc_medians, rat_perc_medians)
+```
+
+Get statistical results:
+```{r}
+stat_perc
+```
+
+Get medians for each group:
+```{r}
+medians_perc
+```
+
+Our results suggest that, for our example set of genes, there is higher sequence
+similarity between our genes and their human orthologs than for other mouse/rat
+genes.
+
+
+### Plot
+We will also make a plot to visualize the statistical findings.
+
+```{r, echo = TRUE, warning = FALSE, fig.width = 8, fig.height = 4}
+mouse_perc_plot <- new_mouse_ortho %>%
+  ggplot(aes(x = Gene_Group, y = MouseToHuman_PercMatch)) +
+  geom_violin(aes(fill = Gene_Group), width = 0.8) +  
+  geom_boxplot(fill = "white", color = "black", width = 0.12, 
+               outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
+               outlier.fill = "black", outlier.alpha = 0.9) +
+  labs(x = "", y = "Sequence Match to Human (%)", title = "Mouse-Human\n") +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0)) +
+  scale_fill_manual(values = c("#296D98", "grey80")) +
+  theme(legend.position = "none", axis.ticks.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey65"),
+        panel.grid.minor.y = element_line(color = "grey85"),
+        axis.text = element_text(size = 13),
+        axis.title = element_text(size = 14))
+
+if (stat_mouse_perc$p < 0.001){
+  mouse_perc_plot <- mouse_perc_plot + 
+    annotate(geom = "text", x = 1.5, y = 44, 
+             label = paste0("Significant\n", "p < 0.001"))
+} else if (stat_mouse_perc$p < 0.05){
+  mouse_perc_plot <- mouse_perc_plot + 
+    annotate(geom = "text", x = 1.5, y = 44, 
+             label = paste0("Significant\n", "p = ", stat_mouse_perc$p))
+} else {
+  mouse_perc_plot <- mouse_perc_plot + 
+    annotate(geom = "text", x = 1.5, y = 44, 
+             label = paste0("Not Significant\n", "p = ", stat_mouse_perc$p))
+}
+
+# Rat-Human
+rat_perc_plot <- new_rat_ortho %>%
+  ggplot(aes(x = Gene_Group, y = RatToHuman_PercMatch)) +
+  geom_violin(aes(fill = Gene_Group), width = 0.8) +  
+  geom_boxplot(fill = "white", color = "black", width = 0.12, 
+               outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
+               outlier.fill = "black", outlier.alpha = 0.9) +
+  labs(x = "", y = "Sequence Match to Human (%)", title = "Rat-Human\n") +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0)) +
+  scale_fill_manual(values = c("#296D98", "grey80")) +
+  theme(legend.position = "none", axis.ticks.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey65"),
+        panel.grid.minor.y = element_line(color = "grey85"),
+        axis.text = element_text(size = 13),
+        axis.title = element_text(size = 14))
+
+if (stat_rat_perc$p < 0.001){
+  rat_perc_plot <- rat_perc_plot + 
+    annotate(geom = "text", x = 1.5, y = 42, 
+             label = paste0("Significant\n", "p < 0.001"))
+} else if (stat_rat_perc$p < 0.05){
+  rat_perc_plot <- rat_perc_plot + 
+    annotate(geom = "text", x = 1.5, y = 42, 
+             label = paste0("Significant\n", "p = ", stat_rat_perc$p))
+} else {
+  rat_perc_plot <- rat_perc_plot + 
+    annotate(geom = "text", x = 1.5, y = 42, 
+             label = paste0("Not Significant\n", "p = ", stat_rat_perc$p))
+}
+
+perc_plot <- ggarrange(mouse_perc_plot, rat_perc_plot)
+perc_plot
+```
+
+### Check Outliers
+In our example, there are a few outliers (1 for mouse and 2 for rat). Let's
+look at the orthologs with the lowest sequence similarity among our genes.
+
+Mouse:
+```{r, message = FALSE}
+lowest_sim_mouse <- full_new_ortho %>% 
+  filter(Gene_Group == "My Genes") %>%
+  arrange(MouseToHuman_PercMatch) %>%
+  select(BM_Human_Gene_Name, Mouse_ID, MouseToHuman_PercMatch) %>%
+  head()
+lowest_sim_mouse
+```
+
+Rat:
+```{r, message = FALSE}
+lowest_sim_rat <- full_new_ortho %>% 
+  filter(Gene_Group == "My Genes") %>%
+  arrange(RatToHuman_PercMatch) %>%
+  select(BM_Human_Gene_Name, Rat_ID, RatToHuman_PercMatch) %>%
+  head()
+lowest_sim_rat
+```
+
+In our example, B2M and BCAS1 has low sequence similarity both for both our 
+original mouse gene and its rat ortholog compared to the human orthologs. For
+mouse, BCAS1 is the low outlier and for rat, both B2M and BCAS1 are the low
+outliers.
+
+
+## dN/dS
+Next we will compare dN/dS values for the orthologs of our genes.
+
+```{r, message = FALSE}
+## DN/DS VALUES ----------
+old_ortho <- getBM(attributes = c("external_gene_name", # Gene symbol
+                                  "ensembl_gene_id", # Human ENSEMBL
+                                  "mmusculus_homolog_ensembl_gene", # Mouse ID
+                                  "rnorvegicus_homolog_ensembl_gene", # Rat ID
+                                  # Mouse homology
+                                  "mmusculus_homolog_dn",
+                                  "mmusculus_homolog_ds",
+                                  "mmusculus_homolog_subtype",
+                                  "mmusculus_homolog_orthology_type",
+                                  "mmusculus_homolog_perc_id",
+                                  "mmusculus_homolog_perc_id_r1",
+                                  "mmusculus_homolog_orthology_confidence",
+                                  # Rat homology
+                                  "rnorvegicus_homolog_dn",
+                                  "rnorvegicus_homolog_ds",
+                                  "rnorvegicus_homolog_subtype",
+                                  "rnorvegicus_homolog_orthology_type",
+                                  "rnorvegicus_homolog_perc_id",
+                                  "rnorvegicus_homolog_perc_id_r1",
+                                  "rnorvegicus_homolog_orthology_confidence"),
+                   mart = hs_ens99) %>%
+  rename(BM_Human_Gene_Name = external_gene_name,
+         Human_ID = ensembl_gene_id,
+         Mouse_ID = mmusculus_homolog_ensembl_gene,
+         Rat_ID = rnorvegicus_homolog_ensembl_gene,
+         Mouse_DN = mmusculus_homolog_dn,
+         Mouse_DS = mmusculus_homolog_ds,
+         Mouse_Ortho_Subtype = mmusculus_homolog_subtype,
+         Mouse_Ortho_Type = mmusculus_homolog_orthology_type,
+         MouseToHuman_PercMatch = mmusculus_homolog_perc_id,
+         HumanToMouse_PercMatch = mmusculus_homolog_perc_id_r1,
+         Mouse_Ortho_Conf = mmusculus_homolog_orthology_confidence,
+         Rat_DN = rnorvegicus_homolog_dn,
+         Rat_DS = rnorvegicus_homolog_ds,
+         Rat_Ortho_Subtype = rnorvegicus_homolog_subtype,
+         Rat_Ortho_Type = rnorvegicus_homolog_orthology_type,
+         RatToHuman_PercMatch = rnorvegicus_homolog_perc_id,
+         HumanToRat_PercMatch = rnorvegicus_homolog_perc_id_r1,
+         Rat_Ortho_Conf= rnorvegicus_homolog_orthology_confidence) %>%
+  mutate(Mouse_DNDS = Mouse_DN/Mouse_DS,
+         Rat_DNDS = Rat_DN/Rat_DS) %>%
+  mutate(across(everything(), function(x) na_if(x, "NaN")))
+
+# Separate by mouse and rat
+old_mouse_ortho <- old_ortho %>%
+  select(-contains("Rat")) %>%
+  unique() %>%
+  mutate(Gene_Group = fct_relevel(ifelse(
+    Human_ID %in% human_ids & Mouse_ID %in% mouse_ids, 
+    "My Genes", "All Other Orthologs"),
+    levels = c("My Genes", "All Other Orthologs")))
+
+old_rat_ortho <- old_ortho %>%
+  select(-contains("Mouse")) %>%
+  unique() %>%
+  mutate(Gene_Group = fct_relevel(ifelse(
+    Human_ID %in% human_ids & Rat_ID %in% rat_ids, 
+    "My Genes", "All Other Orthologs"),
+    levels = c("My Genes", "All Other Orthologs")))
+
+# Join dataframes for reference later
+full_old_ortho <- Reduce(function(x, y) 
+  full_join(x, y), list(old_mouse_ortho, old_rat_ortho)) %>%
+  relocate(Gene_Group, .before = everything()) %>%
+  unique() %>%
+  select(-Mouse_Ortho_Subtype, -Rat_Ortho_Subtype)
+```
+
+### Statistics
+Getting statistics for dN/dS as before with sequence similarity:
+
+```{r, message = FALSE}
+# Stats comparing each dataset to the ones in no datasets
+stat_mouse_dnds <- old_mouse_ortho %>%
+  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf, 
+         Mouse_Ortho_Type == "ortholog_one2one") %>%
+  wilcox_test(Mouse_DNDS ~ Gene_Group) %>%
+  filter(group2 == "All Other Orthologs") %>%
+  rename(Comparison = ".y.")
+stat_rat_dnds <- old_rat_ortho %>%
+  filter(!is.na(Rat_DNDS), Rat_DNDS != Inf, 
+         Rat_Ortho_Type == "ortholog_one2one") %>%
+  wilcox_test(Rat_DNDS ~ Gene_Group) %>%
+  filter(group2 == "All Other Orthologs") %>%
+  rename(Comparison = ".y.")
+
+# Medians
+mouse_dnds_medians <- old_mouse_ortho %>%
+  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf) %>%
+  group_by(Gene_Group) %>%
+  summarize(DNDS_withMouse_Median = median(Mouse_DNDS))
+rat_dnds_medians <- old_rat_ortho %>%
+  filter(!is.na(Rat_DNDS), Rat_DNDS != Inf) %>%
+  group_by(Gene_Group) %>%
+  summarize(DNDS_withRat_Median = median(Rat_DNDS))
+
+# View stats and medians
+stat_dnds <- full_join(stat_mouse_dnds, stat_rat_dnds)
+medians_dnds <- full_join(mouse_dnds_medians, rat_dnds_medians)
+```
+
+Statistics:
+```{r}
+stat_dnds
+```
+
+Medians:
+```{r}
+medians_dnds
+```
+
+For this example, there is no statistically significant difference between the
+dN/dS values for either our original mouse genes or their rat orthologs compared
+to human orthologs.
+
+Note that this analysis has been simplified so that it analyzes all genes with
+orthologs according to the January 2020 ENSEMBL database (the analysis from the 
+manuscript excludes orthologs that are not present in both the January 2020 and
+April 2022 versions). As genomes are updated and new information becomes 
+available, genes that were once thought to be orthologs with one another may be
+revised and vice versa. You may want to check your genes to verify that the 
+orthologs in the 2020 and 2022 ENSEMBL versions are the same.
+
+
+### Plot
+Next, create a plot. *The y axes on these plots have been modified to cap at 3
+for clarity. To change this, remove the `scale_y_continuous()` function from the
+plots.*
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 4}
+mouse_dnds_plot <- old_mouse_ortho %>%
+  ggplot(aes(x = Gene_Group, y = Mouse_DNDS)) +
+  geom_violin(aes(fill = Gene_Group), width = 0.8) +  
+  geom_boxplot(fill = "white", color = "black", width = 0.18, 
+               outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
+               outlier.fill = "black", outlier.alpha = 0.9) +
+  labs(x = "", y = "dN/dS with Human orthoolog\n",
+       title = "Human-Mouse\n") +
+  scale_x_discrete(expand = c(0, 0.55)) +
+  scale_y_continuous(limits = c(0, 3), breaks = seq(0, 3, 0.5), expand = c(0, 0)) +
+  scale_fill_manual(values = c("#296D98", "grey80")) +
+  theme(legend.position = "none", axis.ticks.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey65"),
+        panel.grid.minor.y = element_line(color = "grey85"),
+        axis.text = element_text(size = 13),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 13))
+
+if (stat_mouse_dnds$p < 0.001){
+  mouse_dnds_plot <- mouse_dnds_plot + 
+    annotate(geom = "text", x = 1.5, y = 2, 
+             label = paste0("Significant\n", "p < 0.001"))
+} else if (stat_mouse_dnds$p < 0.05){
+  mouse_dnds_plot <- mouse_dnds_plot + 
+    annotate(geom = "text", x = 1.5, y = 2, 
+             label = paste0("Significant\n", "p = ", stat_mouse_dnds$p))
+} else {
+  mouse_dnds_plot <- mouse_dnds_plot + 
+    annotate(geom = "text", x = 1.5, y = 2, 
+             label = paste0("Not Significant\n", "p = ", stat_mouse_dnds$p))
+}
+
+rat_dnds_plot <- old_rat_ortho %>%
+  ggplot(aes(x = Gene_Group, y = Rat_DNDS)) +
+  geom_violin(aes(fill = Gene_Group), width = 0.75) +  
+  geom_boxplot(fill = "white", color = "black", width = 0.18, 
+               outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
+               outlier.fill = "black", outlier.alpha = 0.9) +
+  labs(x = "", y = "dN/dS with Human orthoolog\n",
+       title = "Human-Rat\n") +
+  scale_y_continuous(limits = c(0, 3), breaks = seq(0, 3, 0.5), expand = c(0, 0)) +
+  scale_fill_manual(values = c("#296D98", "grey80")) +
+  theme(legend.position = "none", axis.ticks.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey65"),
+        panel.grid.minor.y = element_line(color = "grey85"),
+        axis.text = element_text(size = 13),
+        axis.title.x = element_text(size = 14),
+        axis.title.y = element_text(size = 13, color = "white"))
+
+if (stat_rat_dnds$p < 0.001){
+  rat_dnds_plot <- rat_dnds_plot + 
+    annotate(geom = "text", x = 1.5, y = 2, 
+             label = paste0("Significant\n", "p < 0.001"))
+} else if (stat_rat_dnds$p < 0.05){
+  rat_dnds_plot <- rat_dnds_plot + 
+    annotate(geom = "text", x = 1.5, y = 2, 
+             label = paste0("Significant\n", "p = ", stat_rat_dnds$p))
+} else {
+  rat_dnds_plot <- rat_dnds_plot + 
+    annotate(geom = "text", x = 1.5, y = 2, 
+             label = paste0("Not Significant\n", "p = ", stat_rat_dnds$p))
+}
+
+# Save plots
+dnds_plot <- ggarrange(mouse_dnds_plot, rat_dnds_plot)
+dnds_plot
+```
+
+## Gene Expression Patterns Across Development
+For the conservation analysis, our final goal is to compare orthologs' patterns
+of expression across development in the forebrain of mouse, rat, and human. This
+data comes from Cardoso-Moreira et al. (2020), "Developmental gene expression
+differences between humans and mammalian models" published in Cell Reports.
+
+The data from their paper uses human genes and compares to mouse, rat, and other
+species. To do this analysis, we have to search their data using the humnan
+orthologs of our genes rather than searching for the exact name of our mouse or 
+rat genes.
+
+This code can be easily modified to examine the cerebellum instead of the
+forebrain by downloading the table for cerebellum instead.
+
+```{r, warning = FALSE, message = FALSE}
+# "Developmental gene expression differences between humans & mammalian models"
+# Cardoso-Moriera et al. (2020)
+# Table S3A. Comparison of brain temporal trajectories
+
+# Includes human, mouse, rat, rabbit, rhesus
+cons_orig <- read_excel(cm_file, sheet = 1, skip = 2)
+
+# Tidy and create new columns
+# Note that with the new column "Conservation" we DO NOT have enough information
+# to determine whether a gene's temporal developmental expression is shared
+# between mouse and rat.
+cons2020 <- cons_orig %>%
+  select(-c(starts_with("Prob"), Rabbit, Rhesus)) %>%
+  # Categorize by conservation (see above note)
+  mutate(Conservation = fct_relevel(case_when(
+    (Mouse == "Same" & Rat == "Same") ~ "HMR",
+    (Mouse == "Same" & Rat == "Different") ~ "HM",
+    (Mouse == "Different" & Rat == "Same") ~ "HR",
+    (Mouse == "Different" & Rat == "Different") ~ "H",
+    TRUE ~ NA_character_),
+    c("HMR", "HM", "HR", "H"))) %>%
+  mutate(across(everything(), function(x) na_if(x, "NA")))
+
+cons2020_with_incompletes <- cons_orig %>%
+  select(-c(starts_with("Prob"), Rabbit, Rhesus)) %>%
+  # Categorize by conservation (see above note)
+  mutate(Conservation = fct_relevel(case_when(
+    (Mouse == "Same" & Rat == "Same") ~ "HMR",
+    (Mouse == "Same" & Rat == "Different") ~ "HM",
+    (Mouse == "Different" & Rat == "Same") ~ "HR",
+    (Mouse == "Different" & Rat == "Different") ~ "H",
+    # NA genes were not tested because they didn't have complete data.
+    (Mouse == "Same" & Rat == "NA") ~ "HM*",
+    (Mouse == "Different" & Rat == "NA") ~ "H*",
+    (Mouse == "NA" & Rat == "Same") ~ "HR*",  
+    (Mouse == "NA" & Rat == "Different") ~ "H*",    
+    TRUE ~ NA_character_),
+    c("HMR", "HM", "HR", "H", "HM*", "HR*", "H*"))) %>%
+  mutate(across(everything(), function(x) na_if(x, "NA")))
+
+if (rodent_species == "mouse"){
+  cons2020 <- cons2020 %>%
+    mutate(Gene_Group = fct_relevel(ifelse(
+      Human_ID %in% human_ids, "My Genes", "All Other Orthologs"),
+      levels = c("My Genes", "All Other Orthologs")))
+  
+  cons2020_with_incompletes <- cons2020_with_incompletes %>%
+    mutate(Gene_Group = fct_relevel(ifelse(
+      Human_ID %in% human_ids, "My Genes", "All Other Orthologs"),
+      levels = c("My Genes", "All Other Orthologs")))
+  
+} else if (rodent_species == "rat"){
+  cons2020 <- cons2020 %>%
+    mutate(Gene_Group = fct_relevel(ifelse(
+      Human_ID %in% human_ids, "My Genes", "All Other Orthologs"),
+      levels = c("My Genes", "All Other Orthologs")))
+  
+  cons2020_with_incompletes <- cons2020_with_incompletes %>%
+    mutate(Gene_Group = fct_relevel(ifelse(
+      Human_ID %in% human_ids, "My Genes", "All Other Orthologs"),
+      levels = c("My Genes", "All Other Orthologs")))
+  
+} else {
+  print("Error")
+}
+```
+
+In all likelihood, not all of our genes of interest are present in the dataset.
+This is because the original authors looked at genes that were one-to-one
+orthologs in mouse, rat, etc. Let's check how many of our genes are in this
+dataset:
+
+```{r}
+# How many genes are in each Gene_Group in the cons2020 dataset?
+cons2020 %>%
+  group_by(Gene_Group) %>%
+  count()
+```
+
+Which genes were not in the dataset? This prints out any genes (as human 
+ENSEMBL IDs) that are not in the dataset:
+
+```{r}
+human_ids[human_ids %in% (cons2020 %>% 
+                            filter(Gene_Group == "My Genes") %>% 
+                            pull(Human_ID))]
+```
+
+### Statistics
+Now we will do a Fisher's Exact Test to see if our genes are more (or less!) 
+conserved overall in their developmental patterns of expression in the forebrain
+of mouse, rat, and human:
+
+```{r}
+# Fisher's Exact Test
+fisher_table <- table(cons2020$Gene_Group, cons2020$Conservation)
+fisher_test <- fisher.test(fisher_table, simulate.p.value = FALSE)
+```
+
+Statistical results
+```{r}
+fisher_table
+```
+
+Statistical results
+```{r}
+fisher_test
+```
+
+There is no statstically significant difference in conservation of developmental
+gene expression for our example genes.
+
+
+### Plot
+We can again make a plot of our data:
+
+```{r, warning = FALSE, fig.width = 8, fig.height = 4}
+cm_plot <- cons2020 %>%
+  filter(!is.na(Conservation)) %>%
+  ggplot(aes(x = Conservation, fill = Gene_Group)) +
+  geom_bar(aes(group = 1), show.legend = FALSE,
+           position = position_dodge2(preserve = "single"),
+           color = "black") +
+  scale_fill_manual(values = c("#296D98", "grey80")) +
+  labs(y = "Count", 
+       title = "Developmental Trajectories in the Forebrain\n") +
+  theme(axis.ticks.x = element_blank(), panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color = "grey65"),
+        panel.grid.minor.y = element_blank(),
+        axis.text = element_text(size = 13),
+        axis.title = element_text(size = 14),
+        strip.text.x = element_text(size = 14),
+        strip.background = element_rect(fill = "white")) +
+  facet_wrap(~ Gene_Group, scales = "free_y", nrow = 1)
+
+if (fisher_test$p.value < 0.001){
+  sig_text <- data.frame(Conservation = c(3, NA), count = c(15, NA), 
+                         lab = c(paste0("Significant\n", "p < 0.001"), ""),
+                         Gene_Group = factor("My Genes", 
+                                             levels = c("My Genes", 
+                                                        "All Other Orthologs")))
+  cm_plot <- cm_plot + geom_text(data = sig_text, 
+                                 aes(x = Conservation, y = count, label = lab))
+} else if (fisher_test$p.value < 0.05){
+  sig_text <- data.frame(Conservation = c(3, NA), count = c(15, NA), 
+                         lab = c(paste0("Significant\n", "p = ", 
+                                        fisher_test$p.value), ""),
+                         Gene_Group = factor("My Genes", 
+                                             levels = c("My Genes", 
+                                                        "All Other Orthologs")))
+  cm_plot <- cm_plot + geom_text(data = sig_text, 
+                                 aes(x = Conservation, y = count, label = lab))
+} else {
+  sig_text <- data.frame(Conservation = c(3, NA), count = c(15, NA), 
+                         lab = c("Not Significant", ""),
+                         Gene_Group = factor("My Genes", 
+                                             levels = c("My Genes", 
+                                                        "All Other Orthologs")))
+  cm_plot <- cm_plot + geom_text(data = sig_text, 
+                      aes(x = Conservation, y = count, label = lab))
+}
+
+cm_plot
+```
+
+Although this is not signficantly different from all other orthologs, we can see 
+that our example genes that were present in this dataset are, for the most part,
+conserved in their developmental expression patterns between human and mouse,
+and human and rat. Note that this analysis does not look at mouse vs. rat 
+directly, as that information was not present in the original dataset.
+
+### Check Outliers
+Which of our genes are not conserved between human and mouse, and human and rat 
+(i.e. not HMR)?
+
+```{r}
+cons2020 %>% 
+  filter(Gene_Group == "My Genes", Conservation != "HMR") %>%
+  select(-Gene_Group)
+```
+## Create and Save Final CSV
+Lastly, we will create the final dataframe with all of this information and save
+it as a CSV file.
+
+```{r, message = FALSE}
+# Get dataframes wit just candidate genes
+full_old_ortho_candidates <- full_old_ortho %>% filter(Gene_Group == "My Genes")
+full_new_ortho_candidates <- full_new_ortho %>% filter(Gene_Group == "My Genes")
+
+# For some genes, the RAT orthologs changed between the new and old Ensembl 
+# versions. The mouse orthologs are all the same (Any_Mouse_Same == TRUE for all
+# genes). Have separate columns for new and old rat orthologs.
+full_all_cons_df <- full_old_ortho_candidates %>%
+  select(-contains(c("Perc", "Ortho_Conf")), -BM_Human_Gene_Name) %>%
+  rename(Ensembl_99_Mouse_Ortho_Type = Mouse_Ortho_Type,
+         Ensembl_99_Rat_Ortho_Type = Rat_Ortho_Type,
+         Ensembl_99_Rat_ID = Rat_ID,
+         Ensembl_99_Mouse_ID = Mouse_ID) %>%
+  mutate(across(everything(), function(x) na_if(x, ""))) %>%
+  full_join(full_new_ortho_candidates) %>%
+  rename(Ensembl_106_Mouse_Ortho_Type = Mouse_Ortho_Type,
+         Ensembl_106_Rat_Ortho_Type = Rat_Ortho_Type,
+         Ensembl_106_Rat_ID = Rat_ID,
+         Ensembl_106_Mouse_ID = Mouse_ID) %>%
+  select(-contains("Ortho_Conf")) %>%
+  select(-c(Mouse_DN, Mouse_DS, Rat_DN, Rat_DS)) %>%
+  relocate(Ensembl_99_Rat_Ortho_Type, .after = Mouse_DNDS) %>%
+  relocate(BM_Human_Gene_Name, .after = Gene_Group) %>%
+  mutate(Mouse_Same_ID = ifelse(Ensembl_99_Mouse_ID == Ensembl_106_Mouse_ID, 
+                              TRUE, FALSE),
+         Rat_Same_ID = ifelse(Ensembl_99_Rat_ID == Ensembl_106_Rat_ID, 
+                              TRUE, FALSE),
+         Mouse_Same_Ortho = case_when(Ensembl_99_Mouse_Ortho_Type == 
+                                        Ensembl_106_Mouse_Ortho_Type ~ TRUE, 
+                                      Ensembl_99_Mouse_Ortho_Type != 
+                                        Ensembl_106_Mouse_Ortho_Type |
+                                        is.na(Ensembl_99_Mouse_Ortho_Type) |
+                                        is.na(Ensembl_106_Mouse_Ortho_Type) 
+                                      ~ FALSE),
+         Rat_Same_Ortho = case_when(Ensembl_99_Rat_Ortho_Type == 
+                                      Ensembl_106_Rat_Ortho_Type ~ TRUE, 
+                                    Ensembl_99_Rat_Ortho_Type != 
+                                      Ensembl_106_Rat_Ortho_Type |
+                                      is.na(Ensembl_99_Rat_Ortho_Type) |
+                                      is.na(Ensembl_106_Rat_Ortho_Type) 
+                                    ~ FALSE)) %>%
+  group_by(Human_ID) %>%
+  mutate(Any_Mouse_Same = ifelse(sum(Mouse_Same_ID) >= 1, TRUE, FALSE),
+         Any_Rat_Same = ifelse(sum(Rat_Same_ID) >= 1, TRUE, FALSE),
+         Any_Mouse_Ortho_Same = ifelse(sum(Mouse_Same_Ortho) >= 1, TRUE, FALSE),
+         Any_Rat_Ortho_Same = ifelse(sum(Rat_Same_Ortho) >= 1, TRUE, FALSE),
+         Ensembl_99_Mouse_ID = "Same ID as Ensembl release 106",
+         Ensembl_99_Rat_ID = case_when(Rat_Same_ID == 1 ~ "Same ID as Ensembl release 106",
+                                       Any_Rat_Same == TRUE ~ Ensembl_106_Rat_ID,
+                                       TRUE ~ NA_character_)) %>%
+  ungroup() %>%
+  filter(Rat_Same_ID == TRUE | (Rat_Same_ID == FALSE & Any_Rat_Same == FALSE) |
+           is.na(Any_Rat_Same)) %>%
+  mutate(across(everything(), function(x) 
+    gsub("ortholog_one2one", "One-to-one ortholog", x))) %>%
+  mutate(across(everything(), function(x) 
+    gsub("ortholog_many2many", "Many-to-many orthologs", x))) %>%
+  mutate(across(contains("Mouse_Ortho_Type"), function(x) 
+    gsub("ortholog_one2many", "Many mouse to one human ortholog", x))) %>%
+  mutate(across(contains("Rat_Ortho_Type"), function(x) 
+    gsub("ortholog_one2many", "Many rat to one human ortholog", x))) %>%
+  mutate(across(everything(), function(x) na_if(x, ""))) %>%
+  left_join(cons2020_with_incompletes) %>%
+  droplevels() %>%
+  select(c(Gene_Group, BM_Human_Gene_Name, Human_ID, Conservation, 
+           Ensembl_106_Mouse_ID, Ensembl_106_Mouse_Ortho_Type, 
+           MouseToHuman_PercMatch, HumanToMouse_PercMatch, Ensembl_99_Mouse_ID, 
+           Ensembl_99_Mouse_Ortho_Type, Mouse_DNDS, Any_Mouse_Same, 
+           Ensembl_106_Rat_ID, Ensembl_106_Rat_Ortho_Type, RatToHuman_PercMatch, 
+           HumanToRat_PercMatch, Ensembl_99_Rat_ID, Ensembl_99_Rat_Ortho_Type, 
+           Rat_DNDS, Any_Rat_Same))
+           
+# Write to CSV file
+write.csv(full_all_cons_df, cons_csv_file)
+```
+
+## Session Info
+```{r}
+sessionInfo()
+```

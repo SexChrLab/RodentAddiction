@@ -27,7 +27,7 @@ library(clipr)
 
 ## BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
-main_dir <- "G:/Noctsol/Github Repositories/RodentAddiction/"
+main_dir <- "G:/Annika/Github Repositories/RodentAddiction/"
 de_dir <- paste0(main_dir, "post_processing/results/gene_info/")
 gtex_dir <- paste0(main_dir, "post_processing/downloaded_data/gtex/")
 
@@ -39,6 +39,12 @@ new_theme <- theme_bw(base_size = 14) %+replace%
   theme(axis.text = element_text(color = "black"),
         plot.title = element_text(hjust = 0.5))
 theme_set(new_theme)
+
+# Set dplyr functions
+select <- dplyr::select
+filter <- dplyr::filter
+rename <- dplyr::rename
+
 
 
 ## LOAD IN GENE LISTS AND CONSERVATION ANALYSIS ----------
@@ -77,6 +83,7 @@ all_tissue_list <- list(
   "ADP-SBC" = Adipose.Subcutaneous, 
   "ADP-VSO" = Adipose.Visceral_Omentum,
   "ADRNGL" = AdrenalGland,
+  "ART-AOR" = Artery.Aorta,
   "ART-CRN" = Artery.Coronary,
   "ART-TB" = Artery.Tibial,
   "BLADDER" = Bladder,
@@ -133,11 +140,11 @@ gtex_prep <- function(list_of_lists, cols_to_convert, new_col) {
   # Create dataframe
   df <- Reduce(function(x, y) 
     full_join(x, y, by = c("Name", "Description")), list_of_lists) %>%
-    dplyr::select("Name", "Description", contains(cols_to_convert))
+    select("Name", "Description", contains(cols_to_convert))
   # Rename columns to match tissues
   names(df) <- c("Human_ID", "Human_Symbol", names(list_of_lists))
   # Pivot longer
-  pivot_longer(df, cols = 3:55, names_to = "Tissue", values_to = new_col)
+  pivot_longer(df, cols = 3:56, names_to = "Tissue", values_to = new_col)
 }
 
 # Prepare overall mean/median dataframes
@@ -172,41 +179,39 @@ carp_gtex <- gtex_temp %>%
 walk_gtex <- gtex_temp %>%
   filter(Human_ID %in% sig_walk_hs_ids) %>%
   mutate(Gene_Group = "Walker")
-pow_gtex <- gtex_temp %>%
-  filter(Human_ID %in% sig_pow_hs_ids) %>%
-  mutate(Gene_Group = "Powell")
 
 # Join for supplementary material
 gtex <- Reduce(function(x, y) 
-  full_join(x, y), list(carp_gtex, walk_gtex, pow_gtex, gtex_temp)) %>%
+  full_join(x, y), list(carp_gtex, walk_gtex, gtex_temp)) %>%
   mutate(Gene_Group = fct_relevel(ifelse(is.na(Gene_Group), 
                                          "All Other Genes", Gene_Group),
-                                  levels = c("Carpenter", "Walker", "Powell", "All Other Genes"))) %>%
+                                  levels = c("Carpenter", "Walker", 
+                                             "All Other Genes"))) %>%
   relocate(Gene_Group, .before = everything()) %>%
   unique()
 
 # How many genes in GTEX data?
 gtex %>% 
   group_by(Gene_Group) %>% 
-  dplyr::select(Human_ID) %>% 
+  select(Human_ID) %>% 
   unique() %>%
   count()
-# C: 577, W: 112, P: 524, Other: 55048
+# C: 577, W: 112, Other: 55525
 
 
 ## LOAD IN GTEX METADATA ----------
 # Participant information
 pt <- read_delim(paste0(gtex_dir, "participant.tsv"), delim = "\t") %>%
-  dplyr::select(c(1, 2, 8, 9)) %>%
-  dplyr::rename(Participant = "entity:participant_id", Age = "age", 
+  select(c(1, 2, 8, 9)) %>%
+  rename(Participant = "entity:participant_id", Age = "age", 
                 Has_RNAseq = "has_rnaseq", Sex = "sex")
 
 # Sample Attributes
 att <- read_delim(
   paste0(gtex_dir, "GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"), 
   delim = "\t") %>%
-  dplyr::select(c(1, 7)) %>%
-  dplyr::rename(Sample_ID = "SAMPID", Tissue = "SMTSD") %>%
+  select(c(1, 7)) %>%
+  rename(Sample_ID = "SAMPID", Tissue = "SMTSD") %>%
   filter(str_detect(Tissue, "Brain") | Tissue == "Pituitary") %>%
   mutate(Sample_ID_Temp = Sample_ID) %>%
   separate(col = Sample_ID_Temp, into = c("Temp1", "Temp2"), sep = "-") %>%
@@ -291,7 +296,7 @@ tissue_df <- Reduce(function(x, y)
 # that aren't actually present in the data. 
 # E.g. the frontal cortex should have the sample GTEX-1117F-0011-R10a-SM-AHZ7F
 # corresponding to participant GTEX-1117F, but this sample is not present in 
-# the frontal cortex samples (or any other tissues).
+# the frontal cortex samples (or any other tissues of interest).
 
 # Join metadata and TPM dataframes by inner_join to get rid of samples that
 # don't actually exist
@@ -299,7 +304,7 @@ all_df <- inner_join(pt_att, tissue_df)
 
 # Get "new" metadata dataframe based only on samples that exist
 new_metadata <- all_df %>%
-  dplyr::select(-c(Name, Description, TPM)) %>%
+  select(-c(Name, Description, TPM)) %>%
   unique()
 
 
@@ -319,22 +324,22 @@ matched_df <- match.data(matched)[1:7] %>%
 before_match <- new_metadata %>% 
   filter(Age >= 55) %>%
   group_by(Tissue, Sex) %>%
-  dplyr::summarize(Before_Match = n())
+  summarize(Before_Match = n())
 
 # How many samples age 55+ per tissue and sex? AFTER MATCHING
 after_match <- matched_df %>%
   group_by(Tissue, Sex) %>%
-  dplyr::summarize(After_Match = n())
+  summarize(After_Match = n())
 
 # Join w/ TPM values
 tpm <- matched_df %>% inner_join(., all_df)
 
 # Verify that the number of samples stayed the same
 after_match_verify <- tpm %>%
-  dplyr::select(Participant, Sex, Age, Matched, Tissue) %>%
+  select(Participant, Sex, Age, Matched, Tissue) %>%
   unique() %>%
   group_by(Tissue, Sex) %>%
-  dplyr::summarize(After_Match_Verify = n())
+  summarize(After_Match_Verify = n())
 
 # Join summary dataframes and verify
 match_summary <- Reduce(function(x, y) 
@@ -343,7 +348,7 @@ match_summary
 
 # Final TPM dataframe for stats
 final_bysex_tpm <- tpm %>%
-  dplyr::rename(Human_ID = "Name", Human_Symbol = "Description") %>%
+  rename(Human_ID = "Name", Human_Symbol = "Description") %>%
   mutate(Human_ID = sub("\\.[0-9]+", "", Human_ID)) %>%
   mutate(Tissue = case_when(
     Tissue == "Frontal_Cortex" ~ "BRN-CTX-a",
@@ -362,7 +367,7 @@ final_bysex_tpm <- tpm %>%
 
 
 ## SEX/TISSUE ANOVAS FOR INDIVIDUAL GENES ----------
-all_hs_ids <- c(sig_carp_hs_ids, sig_walk_hs_ids, sig_pow_hs_ids)
+all_hs_ids <- c(sig_carp_hs_ids, sig_walk_hs_ids)
 
 # Overall ANOVAs
 bysex_tissue_anovas_temp <- final_bysex_tpm %>%
@@ -372,31 +377,32 @@ bysex_tissue_anovas_temp <- final_bysex_tpm %>%
   group_by(Human_Symbol) %>%
   anova_test(TPM ~ Sex + Tissue + Sex:Tissue, type = "III") %>%
   as.data.frame() %>%
-  dplyr::rename(Sig_p05 = "p<.05")
+  rename(Sig_p05 = "p<.05")
 
 bysex_tissue_anovas <- gtex %>%
-  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
   right_join(., bysex_tissue_anovas_temp) %>%
-  unique()
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
 
 # Genes with main effects or interactions
 genes_sex <- bysex_tissue_anovas %>% 
   filter(Effect == "Sex", Sig_p05 == "*") %>% 
   pull(Human_Symbol) %>%
   unique()
-# 281 genes
+# 179 genes
 
 genes_tissue <- bysex_tissue_anovas %>% 
-  filter(Effect == "Tissue", Sig_p05 == "*") %>% 
+  filter(Effect == "Tissue", Sig_p05 == "*")  %>%
   pull(Human_Symbol) %>%
   unique()
-# 1148 genes
+# 671 genes
 
 genes_inter <- bysex_tissue_anovas %>% 
   filter(Effect == "Sex:Tissue", Sig_p05 == "*") %>% 
   pull(Human_Symbol) %>%
   unique()
-# 88 genes
+# 55 genes
 
 # SEX EFFECT:
 # No need for post-hoc tests for Sex (only 2 groups)
@@ -414,7 +420,7 @@ female_higher <- final_bysex_tpm %>%
   filter(Higher_Sex == "Female") %>%
   pull(Human_Symbol) %>%
   unique()
-# 47 of 281
+length(female_higher) # 39 of 179
 
 # Use that vector of genes to label a summary dataframe
 sex_summary_temp <- final_bysex_tpm %>%
@@ -427,9 +433,10 @@ sex_summary_temp <- final_bysex_tpm %>%
   pivot_wider(names_from = Sex, values_from = c(Mean_TPM, SD_TPM))
 
 sex_summary <- gtex %>%
-  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
   right_join(., sex_summary_temp) %>%
-  unique()
+  unique() %>%
+  filter(Gene_Group != "All Other Genes")
 
 # TISSUE EFFECT:
 # Post-hoc Tukey tests for each gene with significant main effect of Tissue
@@ -444,10 +451,10 @@ tukey_tissue_temp <- final_bysex_tpm %>%
   as.data.frame()
 
 # Get human IDs and symbols together in a dataframe
-hs_sym_ids <- final_bysex_tpm %>% dplyr::select(Human_Symbol, Human_ID)
+hs_sym_ids <- final_bysex_tpm %>% select(Human_Symbol, Human_ID)
 
 tukey_tissue <- gtex %>%
-  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
   right_join(., tukey_tissue_temp) %>%
   unique() %>%
   filter(Gene_Group != "All Other Genes")
@@ -465,7 +472,7 @@ tukey_sex_tissue_temp <- final_bysex_tpm %>%
   as.data.frame()
 
 tukey_sex_tissue <- gtex %>%
-  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
   right_join(., tukey_sex_tissue_temp) %>%
   unique() %>%
   filter(Gene_Group != "All Other Genes")
@@ -488,7 +495,7 @@ sex_tissue_summary <- final_bysex_tpm %>%
   filter(p.adj.signif != "ns") %>%
   droplevels() %>%
   relocate(Gene_Group, Human_ID, .before = everything()) %>%
-  dplyr::select(1:9)
+  select(1:9)
 
 # CLDs FOR TISSUE EFFECT
 # Get compact letter display (CLD) for tissue data
@@ -530,7 +537,7 @@ cld_df_temp <- Reduce(function(x, y)
          Group = gsub("9", "i", Group))
 
 cld_df <- gtex %>%
-  dplyr::select(Gene_Group, Human_ID, Human_Symbol) %>%
+  select(Gene_Group, Human_ID, Human_Symbol) %>%
   right_join(., cld_df_temp, by = c("Human_Symbol" = "Human_Gene_Symbol")) %>%
   unique() %>%
   filter(Gene_Group != "All Other Genes")
@@ -549,7 +556,7 @@ brain_spec_firstpass <- gtex %>%
   filter(!is.na(System)) %>%
   group_by(Human_ID) %>%
   mutate(Grand_Tissue_Mean = mean(Mean_TPM)) %>%
-  dplyr::select(Human_ID, Human_Symbol, System, System_Total,
+  select(Human_ID, Human_Symbol, System, System_Total,
                 Grand_Tissue_Mean, Gene_Group) %>%
   unique() %>%
   pivot_wider(names_from = System, values_from = System_Total) %>%
@@ -563,17 +570,17 @@ filter_genes <- brain_spec %>% pull(Human_ID) %>% unique()
 # Count genes before and after filtering
 # All genes
 brain_spec_firstpass %>% group_by(Human_ID) %>% count() %>% nrow() # 56,200
-brain_spec %>% group_by(Human_ID) %>% count() %>% nrow() # 55,873 genes after
+brain_spec %>% group_by(Human_ID) %>% count() %>% nrow() # 55,874 genes after
 # "All Other Genes"
 brain_spec_firstpass %>% filter(Gene_Group == "All Other Genes") %>% 
-  group_by(Human_ID) %>% count() %>% nrow() # 55,048 before
+  group_by(Human_ID) %>% count() %>% nrow() # 55,525 before
 brain_spec %>% filter(Gene_Group == "All Other Genes") %>% 
-  group_by(Human_ID) %>% count() %>% nrow() # 54,721 after
+  group_by(Human_ID) %>% count() %>% nrow() # 55,199 after
 # Candidate genes
 brain_spec_firstpass %>% filter(Gene_Group != "All Other Genes") %>% 
-  group_by(Human_ID) %>% count() %>% nrow() # 1,152 before
+  group_by(Human_ID) %>% count() %>% nrow() # 675 before
 brain_spec %>% filter(Gene_Group != "All Other Genes") %>% 
-  group_by(Human_ID) %>% count() %>% nrow() # 1,152 after
+  group_by(Human_ID) %>% count() %>% nrow() # 675 after
 
 # Calculate "Within-Brain Percentage":
 # Mean TPM for a gene in a CNS tissue vs. that gene's CNS Total
@@ -596,30 +603,39 @@ gtex_spec <- Reduce(full_join, list(gtex, brain_spec_firstpass, wnbrain_perc)) %
 
 cns_means <- gtex_spec %>% 
   filter(System == "CNS", Gene_Group != "All Other Genes") %>%
-  dplyr::select(Human_ID, Human_Symbol, Tissue, Mean_TPM, Median_TPM) %>%
+  select(Human_ID, Human_Symbol, Tissue, Mean_TPM, Median_TPM) %>%
   group_by(Human_ID) %>%
   mutate(CNS_Mean = mean(Mean_TPM)) %>%
-  dplyr::select(Human_ID, Human_Symbol, CNS_Mean) %>%
+  select(Human_ID, Human_Symbol, CNS_Mean) %>%
   arrange(Human_Symbol) %>%
   unique()
 
+# Number of genes with higher expression in brain than body
+gtex_spec %>%
+  filter(Gene_Group != "All Other Genes", BrainSpec > 0) %>%
+  group_by(Gene_Group) %>%
+  select(Human_ID, BrainSpec) %>%
+  unique() %>%
+  count()
+  
+
+
 ### PLOT ----------
 # Genes to label
-shared_label_list <- c("MOBP")
-general_label_list <- c("GAD2",
+shared_label_list <- c("CARTPT")
+general_label_list <- c("MOBP", "GAD2",
                         "GPR101", "PRKCG",
-                        "OPALIN",
-                        "FAM53B", "C1QL2", "CREB1")
+                        "FAM53B", "C1QL2", "CREB1", "DRD3")
 
 # All overlaps in ggrepel
 options(ggrepel.max.overlaps = Inf)
 
 bs_plot <- brain_spec %>%
   mutate(Gene_Group = as.character(Gene_Group),
-         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other Genes" ~ "Other",
+         Gene_Group = fct_relevel(case_when(Gene_Group == "All Other Genes" ~ "All Other Genes",
                                             TRUE ~ Gene_Group),
-                                  levels = c("Carpenter", "Walker", "Powell", "Other"))) %>%
-  dplyr::select(Human_ID, Human_Symbol, BrainSpec, Gene_Group) %>%
+                                  levels = c("Carpenter", "Walker", "All Other Genes"))) %>%
+  select(Human_ID, Human_Symbol, BrainSpec, Gene_Group) %>%
   unique() %>%
   filter(BrainSpec != -Inf, BrainSpec != Inf) %>%
   ggplot(aes(x = Gene_Group, y = BrainSpec, fill = Gene_Group)) +
@@ -637,7 +653,7 @@ bs_plot <- brain_spec %>%
   scale_y_continuous(limits = c(-16, 12), breaks = seq(-16, 12, 4), 
                      expand = c(0, 0.00001)) +
   scale_x_discrete(expand = c(0, 0.55)) +
-  scale_fill_manual(values = c("#44AA99", "#C148AD", "#DDCC77", "grey60")) +
+  scale_fill_manual(values = c("#44AA99", "#C148AD", "grey80")) +
   theme(legend.position = "none", axis.ticks.x = element_blank(), 
         panel.grid = element_blank(),
         axis.text = element_text(size = 13),
@@ -650,24 +666,24 @@ bs_plot <- brain_spec %>%
                                            Human_Symbol, NA_character_)),
                    aes(label = label), color = "black", fill = "white",
                    nudge_y = 0.01, nudge_x = 0.01,
-                   box.padding = 0.5, fontface = "bold", size = 3, seed = 68) +
+                   box.padding = 0.5, fontface = "bold", size = 3, seed = 58) +
   geom_label_repel(data = . %>%
                      mutate(label = ifelse(Human_Symbol %in% general_label_list, 
                                            Human_Symbol, NA_character_)),
                    aes(label = label), color = "black",
-                   box.padding = 0.5, fontface = "bold", size = 3, seed = 454)
-
-
-# Save as pdf
-# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_5_31_2022.svg", width = 4.5, height = 5.5)
+                   box.padding = 0.5, fontface = "bold", size = 3, nudge_y = 1, seed = 1000)
 bs_plot
-# dev.off()
+
+# Save as svg
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_9_25_2022.svg", width = 4.2, height = 5.5)
+bs_plot
+dev.off()
 
 ### STATISTICS ----------
 # Wilcoxon test between groups
-# Are Candidate genes more specific to the brain than other genes?
+# Are craving genes more specific to the brain than other genes?
 gtex_spec %>%
-  dplyr::select(Human_ID, System, BrainSpec, Gene_Group) %>%
+  select(Human_ID, System, BrainSpec, Gene_Group) %>%
   unique() %>%
   filter(System == "CNS", BrainSpec != -Inf, BrainSpec != Inf) %>%
   wilcox_test(BrainSpec ~ Gene_Group) %>%
@@ -675,7 +691,7 @@ gtex_spec %>%
 
 # Summary data for brain specificity by gene group
 summary_brainspec <- gtex_spec %>%
-  dplyr::select(Human_Symbol, System, BrainSpec, Gene_Group) %>%
+  select(Human_Symbol, System, BrainSpec, Gene_Group) %>%
   unique() %>%
   filter(System == "CNS", BrainSpec != -Inf, BrainSpec != Inf) %>%
   group_by(Gene_Group) %>%
@@ -689,18 +705,18 @@ cns_means_df <- gtex %>%
   filter(!is.na(System)) %>%
   group_by(Human_ID, System) %>%
   mutate(System_Mean = mean(Mean_TPM)) %>%
-  dplyr::select(Human_ID, Human_Symbol, System, System_Total,
+  select(Human_ID, Human_Symbol, System, System_Total,
                 System_Mean, Gene_Group) %>%
   unique() %>%
   pivot_wider(names_from = System, values_from = System_Mean) %>%
-  dplyr::select(-Body) %>%
-  dplyr::rename(CNS_Mean = CNS) %>%
+  select(-Body) %>%
+  rename(CNS_Mean = CNS) %>%
   filter(!is.na(CNS_Mean)) %>%
   ungroup()
 
 # Get regions of highest expression
 temp_df <- cld_df %>%
-  dplyr::select(Human_Symbol, Tissue, Group) %>%
+  select(Human_Symbol, Tissue, Group) %>%
   filter(grepl("a", Group)) %>%
   pivot_wider(names_from = Tissue, values_from = Group)
 
@@ -709,7 +725,7 @@ for (cl in names(test)[2:ncol(temp_df)]) {
 }
 
 highest_region_df <- cld_df %>%
-  dplyr::select(Human_Symbol) %>%
+  select(Human_Symbol) %>%
   unique() %>%
   mutate(Highest_CNS_Regions = "")
 
@@ -718,7 +734,7 @@ for (i in 1:nrow(temp_df)) {
     .[i, ] %>%
     .[ , apply(., 2, function(x) !any(is.na(x)))] %>%
     unite("Highest_CNS_Regions", 2:ncol(.), remove = TRUE, sep = ", ") %>%
-    dplyr::select(2)
+    select(2)
 }
 
 # Load conservation data
@@ -727,14 +743,14 @@ full_cons_df <- readRDS(file = paste0(main_dir, "post_processing/results/other/f
 # Final dataframe with everything
 final_df <- full_join(brain_spec, cns_means_df) %>%
   mutate(Gene_Group = as.factor(ifelse(Gene_Group == "All Other Genes", 
-                                       "All Other Homologs", 
+                                       "All Other Orthologs", 
                                        as.character(Gene_Group)))) %>%
-  filter(Gene_Group != "All Other Homologs") %>%
+  filter(Gene_Group != "All Other Orthologs") %>%
   full_join(., highest_region_df) %>%
   full_join(full_cons_df, .) %>%
-  filter(Gene_Group != "All Other Homologs") %>%
-  dplyr::select(1:18, 23, 25:26)
-# 1424 * 21 dimensions
+  filter(Gene_Group != "All Other Orthologs") %>%
+  select(1:18, 23, 25:26)
+# 862 * 21 dimensions
 
 saveRDS(final_df, file = paste0(main_dir, "post_processing/results/other/final_df.RDS"))
 
@@ -777,31 +793,34 @@ vert_gene_plot <- function(gene_name, x_lim, br, strip_color = "#DE8971",
 
 
 # Interesting candidate genes
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/GAD2_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/GAD2_Tissue_9_25_2022.svg", width = 2.35, height = 5.4)
 vert_gene_plot("GAD2", 75, 25, "#44AA99", "black")
 dev.off()
 
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/PRKCG_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/KIF5A_Tissue_9_25_2022.svg", width = 2.35, height = 5.4)
+vert_gene_plot("KIF5A", 1200, 400, "#44AA99", "white")
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/KIF5A_Tissue_9_25_2022.svg", width = 2.35, height = 5.4)
+vert_gene_plot("GPR101", 8, 2, "#C148AD", "white")
+dev.off()
+
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/PRKCG_Tissue_9_25_2022.svg", width = 2.35, height = 5.4)
 vert_gene_plot("PRKCG", 102, 25, "#C148AD", "white")
 dev.off()
 
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/OPALIN_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
-vert_gene_plot("OPALIN", 120, 40, "#DDCC77", "white")
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/CARTPT_Tissue_9_25_2022.svg", width = 2.35, height = 5.4)
+vert_gene_plot("CARTPT", 450, 150, "white", "white")
 dev.off()
 
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/MOBP_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
-vert_gene_plot("MOBP", 1500, 500, "white", "white")
-dev.off()
-
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/KIF5A_Tissue_5_31_2022.svg", width = 2.6, height = 5.4)
-vert_gene_plot("KIF5A", 1200, 400, "white", "white")
-dev.off()
 
 # Comparison genes
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/CREB1_Tissue_5_31_2022.svg", width = 2.4, height = 5.4)
-vert_gene_plot("CREB1", 18, 3, "grey60", "black")
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/CREB1_Tissue_9_25_2022.svg", width = 2.5, height = 5.4)
+vert_gene_plot("CREB1", 18, 3, "grey80", "black")
 dev.off()
 
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/C1QL2_Tissue_5_31_2022.svg", width = 2.4, height = 5.4)
-vert_gene_plot("C1QL2", 24, 4, "grey60", "white")
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/C1QL2_Tissue_9_25_2022.svg", width = 2.5, height = 5.4)
+vert_gene_plot("C1QL2", 24, 4, "grey80", "white")
 dev.off()
+
+
