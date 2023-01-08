@@ -1,8 +1,8 @@
 ---
-title: "Streamlined Conservation"
+title: "Streamlined GTEx"
 output: html_document
 author: Annika Vannan, avannan@asu.edu
-date: 12/18/22
+date: 01/07/23
 ---
 
 ## Set-Up
@@ -213,16 +213,6 @@ pheno_att <- inner_join(pheno, att) %>%
            TRUE ~ Tissue)) %>%
   mutate(Sample_ID = str_to_upper(str_replace_all(Sample_ID, "-", "\\.")))
 
-```
-
-```{r, warning = FALSE}
-test <- read.delim("G:/Noctsol/gene_tpm_2017-06-05_v8_adipose_subcutaneous.gct.gz", skip = 2)
-
-
-test2 <- read.delim("G:/Noctsol/Downloads/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct.gz", 
-                   skip = 2) %>%
-  pivot_longer(cols = 3:ncol(.), names_to = "Tissue", values_to = "Mean_TPM") %>%
-  rename(Human_ID = Name, Human_Symbol = Description)
 ```
 
 Next we need to load in the by-tissue TPM files. This will take a while if you
