@@ -2,7 +2,7 @@
 title: "Streamlined GTEx"
 output: html_document
 author: Annika Vannan, avannan@asu.edu
-date: 01/07/23
+date: 01/14/23
 ---
 
 ## Set-Up
@@ -61,11 +61,13 @@ includes:
 * GTEx_Analysis_v8_Annotations_SamplePhenotypesDS.txt
 * GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_median_tpm.gct.gz
 
-You will also need **all** 54 of the by-tissue TPM files, all located in the 
-same folder. The files have names like 
+You will also need the 11 by-tissue TPM files that correspond to the brain, all 
+located in the same folder. The files have names like 
 `gene_tpm_2017-06-05_v8_adipose_subcutaneous.gct.gz`. Put all of these files in
 the same folder, and then change the following code chunk to reference that 
-folder. Make sure no other files are in that folder.
+folder. Make sure no other files are in that folder. You do **not** need the 2
+brain files called "cerebellum" and "cortex" - these are replicates of the files
+we *will* use ("cerebellar hemisphere" and "frontal cortex").
 
 ```{r}
 # Location of GTEX files
@@ -91,11 +93,12 @@ all_hs_ids <- c("ENSG00000132702", "ENSG00000064787", "ENSG00000116161",
 We also need to set the locations where the final output files should be saved.
 
 ```{r}
-anova_file <- "C:/Annika/Documents/brain_anova.csv"
-tissue_effect_file <- "C:/Annika/Documents/brain_tissue_posthoc.csv"
-tissue_cld_file <- "C:/Annika/Documents/brain_tissue_clds.csv"
-interaction_file <- "C:/Annika/Documents/brain_interaction_posthoc.csv"
-brain_spec_file <- "C:/Annika/Documents/brain_spec.csv"
+anova_file <- "C:/Users/Annika/Documents/brain_anova.csv"
+tissue_effect_file <- "C:/Users/Annika/Documents/brain_tissue_posthoc.csv"
+tissue_cld_file <- "C:/Users/Annika/Documents/brain_tissue_clds.csv"
+highest_cld_file <- "C:/Users/Annika/Documents/highest_brain_clds.csv"
+interaction_file <- "C:/Users/Annika/Documents/brain_interaction_posthoc.csv"
+brain_spec_file <- "C:/Users/Annika/Documents/brain_spec.csv"
 ```
 
 ### Optional Parameters
@@ -118,6 +121,10 @@ First we need to load in the GTEX data. In the manuscript, we looked at gene
 expression means and medians; for this simplified script, we will only use
 medians, which are easily downloaded from the GTEx website without needing 
 special access.
+
+As we load in these files and create new lists and dataframes, we'll remove some
+of the old objects. This is to free up room since many of these objects take
+up a lot of memory.
 
 ```{r, message = FALSE}
 # Get names of tissues in alphabetical order
@@ -165,6 +172,53 @@ gtex_medians %>%
   count()
 ```
 
+Next we need to load in the by-tissue TPM files. This will take a while if you
+are running it on a local computer and not a cluster.
+
+To do this, we will get a list of the files and then load them in separately.
+Then the list of lists will be transformed into a tidy dataframe.
+
+```{r, warning = FALSE, message = FALSE}
+tissue_files <- list.files(path = file.path(tpm_folder), 
+                           pattern = "*gct.gz", full.names = TRUE)
+
+# Load files separately into environment
+list2env(envir = .GlobalEnv,
+         lapply(setNames(tissue_files, make.names(abc_tissues[c(8:11, 14:20)])), 
+                read.delim, skip = 2))
+
+# Create list of lists for easier transformation into data frame
+# Pivot each sub-list so that Sample IDs are in rows
+# Filter to only the genes of interest
+tissue_list <- list("BRN-AMY" = BRN.AMY, "BRN-ACC" = BRN.ACC, 
+                    "BRN-CAU" = BRN.CAU, "BRN-CB-a"= BRN.CB.a, 
+                    "BRN-CTX-a" = BRN.CTX.a, "BRN-HIPP" = BRN.HIPP, 
+                    "BRN-HYP" = BRN.HYP, "BRN-NAC" = BRN.NAC, 
+                    "BRN-PUT" = BRN.PUT, "BRN-SPC" = BRN.SPC, 
+                    "BRN-SN" = BRN.SN) %>%
+  lapply(filter, sub("\\.[0-9]+", "", Name) %in% all_hs_ids) %>%
+  lapply(pivot_longer, -c(1:3), names_to = "Sample_ID", values_to = "TPM") %>%
+  map2(., names(.), ~cbind(.x, Tissue = .y)) %>%
+  lapply(mutate, 
+         Sample_ID = str_to_upper(str_replace_all(Sample_ID, "-", "\\.")),
+         ID_Temp = as.character(Sample_ID)) %>%
+  lapply(separate, col = ID_Temp, into = c("Tmp1", "Tmp2"), sep = "\\.") %>%
+  lapply(unite, col = Participant, c(Tmp1, Tmp2), sep = "-")
+
+# Remove some memory-intensive files
+rm("BRN.AMY", "BRN.ACC", "BRN.CAU", "BRN.CB.a", "BRN.CB.b", "BRN.CTX.b", 
+   "BRN.CTX.a", "BRN.HIPP", "BRN.HYP", "BRN.NAC", "BRN.PUT", "BRN.SPC")
+gc() # Clear unused memory
+
+# Create dataframe from modified tissue lists
+tissue_df <- Reduce(function(x, y) 
+  full_join(x, y), tissue_list) %>%
+  select(-id)
+
+# Remove another memory-intensive file
+rm(tissue_list)
+gc()
+```
 We will also need to load in the GTEx metadata. This script is designed so that
 no one needs special access to GTEx to use it. For example, in the manuscript 
 we only compared males and females who were 55 years of age or older. However,
@@ -176,7 +230,7 @@ If you have access to the protected access GTEx data, use the file
 proceeding. Code to do this can be found in the original `individual_gtex.R` 
 file, which processes data from the manuscript.
 
-```{r, message = FALSE}
+```{r, message = FALSE, warning = FALSE}
 # Sample Attributes
 att <- read_delim(att_file, delim = "\t") %>%
   select(c(1, 7)) %>%
@@ -196,70 +250,24 @@ names(pheno) <- c("Participant", "Sex", "Age")
 pheno_att <- inner_join(pheno, att) %>%
   mutate(Group = as.logical(Sex == "Female"),
          Tissue = case_when(
-           Tissue == "Brain - Frontal Cortex (BA9)" ~ "Frontal_Cortex",
-           Tissue == "Brain - Cortex" ~ "Cortex",
-           Tissue == "Brain - Cerebellum" ~ "Cerebellum",
-           Tissue == "Brain - Cerebellar Hemisphere" ~ "Cerebellar_Hemisphere",
-           Tissue == "Brain - Caudate (basal ganglia)" ~ "Caudate",
-           Tissue == "Brain - Nucleus accumbens (basal ganglia)" ~ "Nucleus_Accumbens",
-           Tissue == "Brain - Putamen (basal ganglia)" ~ "Putamen",
-           Tissue == "Brain - Hypothalamus" ~ "Hypothalamus",
-           Tissue == "Brain - Spinal cord (cervical c-1)" ~ "Spinal_Cord_C1",
-           Tissue == "Brain - Hippocampus" ~ "Hippocampus",
-           Tissue == "Brain - Substantia nigra" ~ "Substantia_Nigra",
-           Tissue == "Brain - Frontal Cortex (BA9)" ~ "Frontal_Cortex",
-           Tissue == "Brain - Anterior cingulate cortex (BA24)" ~ "Anterior_Cingulate",
-           Tissue == "Brain - Amygdala" ~ "Amygdala",
+           Tissue == "Brain - Frontal Cortex (BA9)" ~ "BRN-CTX-a",
+           Tissue == "Brain - Cerebellar Hemisphere" ~ "BRN-CB-a",
+           Tissue == "Brain - Caudate (basal ganglia)" ~ "BRN-CAU",
+           Tissue == "Brain - Nucleus accumbens (basal ganglia)" ~ "BRN-NAC",
+           Tissue == "Brain - Putamen (basal ganglia)" ~ "BRN-PUT",
+           Tissue == "Brain - Hypothalamus" ~ "BRN-HYP",
+           Tissue == "Brain - Spinal cord (cervical c-1)" ~ "BRN-SPC",
+           Tissue == "Brain - Hippocampus" ~ "BRN-HIPP",
+           Tissue == "Brain - Substantia nigra" ~ "BRN-SN",
+           Tissue == "Brain - Anterior cingulate cortex (BA24)" ~ "BRN-ACC",
+           Tissue == "Brain - Amygdala" ~ "BRN-AMY",
            TRUE ~ Tissue)) %>%
   mutate(Sample_ID = str_to_upper(str_replace_all(Sample_ID, "-", "\\.")))
-
 ```
 
-Next we need to load in the by-tissue TPM files. This will take a while if you
-are running it on a local computer and not a cluster.
-
-To do this, we will get a list of the files and then load them in separately.
-Then the list of lists will be transformed into a tidy dataframe.
-
-```{r, warning = FALSE}
-tissue_files <- list.files(path = file.path(tpm_folder), 
-                           pattern = "*gct.gz", full.names = TRUE)
-
-# Load files separately into environment
-list2env(envir = .GlobalEnv,
-         lapply(setNames(tissue_files, make.names(abc_tissues)), 
-                read.delim, skip = 2))
-
-# Create list of lists for easier transformation into data frame
-# Pivot each sub-list so that Sample IDs are in rows
-tissue_list <- list("Amygdala" = Amygdala, 
-                    "Anterior_Cingulate" = Anterior_Cingulate, 
-                    "Caudate" = Caudate, 
-                    "Cerebellar_Hemisphere" = Cerebellar_Hemisphere, 
-                    "Cerebellum" = Cerebellum, "Cortex" = Cortex, 
-                    "Frontal_Cortex" = Frontal_Cortex, 
-                    "Hippocampus" = Hippocampus, "Hypothalamus" = Hypothalamus, 
-                    "Nucleus_Accumbens" = Nucleus_Accumbens, 
-                    "Putamen" = Putamen, 
-                    "Spinal_Cord_C1" = Spinal_Cord_C1, 
-                    "Substantia_Nigra" = Substantia_Nigra,
-                    "Pituitary" = Pituitary) %>%
-  lapply(pivot_longer, -c(1:2), names_to = "Sample_ID", values_to = "TPM") %>%
-  map2(., names(.), ~cbind(.x, Tissue = .y)) %>%
-  lapply(mutate, 
-         Sample_ID = str_to_upper(str_replace_all(Sample_ID, "-", "\\.")),
-         ID_Temp = as.character(Sample_ID)) %>%
-  lapply(separate, col = ID_Temp, into = c("Tmp1", "Tmp2"), sep = "\\.") %>%
-  lapply(unite, col = Participant, c(Tmp1, Tmp2), sep = "-")
-
-# Create dataframe from modified tissue lists
-tissue_df <- Reduce(function(x, y) 
-  full_join(x, y), tissue_list)
-```
-
-Now that we have the tissue data loaded in, we know which samples have data for 
-the brain samples. We need to clean the metadata so the correct samples can be
-matched.
+Now that we have the metadata and tissue data loaded in, we know which samples 
+have data for the brain samples. We need to clean the metadata so the correct 
+samples can be matched.
 
 ```{r, message = FALSE}
 # The sample metadata (pt and att dataframes) indicate that there are samples
@@ -276,24 +284,6 @@ all_df <- inner_join(pheno_att, tissue_df)
 new_metadata <- all_df %>%
   select(-c(Name, Description, TPM)) %>%
   unique()
-```
-
-Because the individual tissue dataframes take up a lot of memory, we should 
-remove them after creating the final combined dataframe.
-
-```{r, message = FALSE}
-rm(tissue_list, "ADP.SBC", "ADP.VSO", "ADRNGL", "ART.AOR", "ART.CRN",
-                 "ART.TB", "BLADDER", "BRN.AMY", "BRN.ACC", "BRN.CAU", 
-                 "BRN.CB.a", "BRN.CB.b", "BRN.CTX.b", "BRN.CTX.a", "BRN.HIPP", 
-                 "BRN.HYP", "BRN.NAC", "BRN.PUT", "BRN.SPC", "BRN.SN", "BREAST",
-                 "CELL.FB", "CELL.LYM", "CVX.ECT", "CVX.END", "CLN.SIG", 
-                 "CLN.TRN", "ESP.GEJ", "ESP.MCS", "ESP.MSL", "FLPTB", "HRT.AA", 
-                 "HRT.LV", "KDY.CTX", "KDY.MDL", "LIVER", "LUNG", "SALGL", 
-                 "MSC.SK", "NRV.TB", "OVARY", "PANCREAS", "BRN.PTRY", 
-                 "PROSTATE", "SKN.NSP", "SKN.SLL", "SIN.TIL", "SPLEEN", 
-                 "STOMACH", "TESTIS", "THYROID", "UTERUS", "VAGINA", "WHLBLD",
-   tissue_df)
-gc() # Clear unused memory
 ```
 
 ### Age-Matching Samples
@@ -438,8 +428,8 @@ female_higher <- final_bysex_tpm %>%
   filter(Higher_Sex == "Female") %>%
   pull(Human_Symbol) %>%
   unique()
-print(paste("Of the", length(genes_sex), "with a significant main effect of 
-            Sex,", length(female_higher), "have higher expression in females"))
+print(paste("Of the", length(genes_sex), "with a significant main effect of Sex,", 
+            length(female_higher), "have higher expression in females"))
 
 # Use that vector of genes to label a summary dataframe
 sex_summary_temp <- final_bysex_tpm %>%
@@ -481,7 +471,7 @@ tukey_tissue <- gtex_medians %>%
   filter(Gene_Group != "All Other Genes")
 ```
 
-###### Get CLDs for the Tissue Effect
+##### Get CLDs for the Tissue Effect
 We can get compact letter displays (CLDs) for the tissue data. This summarizes
 the similarities and differences between the pairwise comparisons from Tukey's
 tests using letters.
@@ -549,6 +539,8 @@ detach("package:MASS", unload = TRUE)
 ```
 
 Using the CLD data, we can also find the brain regions that have the highest
+expression. This dataframe is not very helpful by itself, but can be used in
+combination with the CLD dataframe to understand which regions have the highest
 expression.
 
 ```{r, message = FALSE}
@@ -693,9 +685,12 @@ summary_brainspec <- gtex_spec %>%
 summary_brainspec
 ```
 
+In our example, our genes are more specific to the brain than all other genes.
+This will be reflected in the plot we make next.
+
 ### Plots
 #### Brain Specificity
-```{r, fig.width = 4.5, fig.height = 4.5}
+```{r, fig.width = 4.5, fig.height = 4.5, warning = FALSE}
 bs_plot <- brain_spec %>%
   select(Human_ID, Human_Symbol, BrainSpec, Gene_Group) %>%
   unique() %>%
@@ -737,10 +732,10 @@ bs_plot
 ```
 #### Expression of Individual Genes Across Tissues
 
-Here is a custom function for plotting specific genes of interest. 
+We can also plot specific genes of interest. Below is a custom function for that.
 
 ```{r, message = FALSE}
-vert_gene_plot <- function(gene_name, x_lim, br) {
+vert_gene_plot <- function(gene_name) {
   gtex_spec %>%
     mutate(System = fct_rev(case_when(
       Tissue == "BRN-CB-b" | Tissue == "BRN-CTX-b" ~ NA_character_,
@@ -790,8 +785,9 @@ tissues
 write.csv(bysex_tissue_anovas, anova_file)
 write.csv(tukey_tissue, tissue_effect_file)
 write.csv(cld_df, tissue_cld_file)
+write.csv(highest_region_df, highest_cld_file)
 write.csv(tukey_sex_tissue, interaction_file)
-write.csv(my_gtex_results, brain_spec_file)
+write.csv(brain_spec %>% filter(Gene_Group == "My Genes"), brain_spec_file)
 ```
 
 ## Session Info

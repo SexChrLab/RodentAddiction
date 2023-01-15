@@ -396,6 +396,102 @@
         "Trim_Min_Length": "75"
     },
 
+    
+    "SRS5770736_S28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "SALINE NAC 7",
+        "SRA_Sample_ID": "SRS5770736",
+        "SRA_Run_ID": "SRR10596884",
+        "GEO_Sample_ID": "GSM4205515",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:32786:1191 1:N:0:TCCGGAGA+TCAGAGCC",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "S28abs",
+        "Drug": "Saline",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770737_S28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "SALINE NAC 8",
+        "SRA_Sample_ID": "SRS5770737",
+        "SRA_Run_ID": "SRR10596885",
+        "GEO_Sample_ID": "GSM4205516",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:31324:1191 1:N:0:TCTCGCGC+AGGCTATA",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "S28abs",
+        "Drug": "Saline",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770738_S28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "SALINE NAC 10",
+        "SRA_Sample_ID": "SRS5770738",
+        "SRA_Run_ID": "SRR10596887",
+        "GEO_Sample_ID": "GSM4205518",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:2717:1209 1:N:0:TCCGGAGA+GCCTCTAT",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "S28abs",
+        "Drug": "Saline",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770739_S28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "SALINE NAC 9",
+        "SRA_Sample_ID": "SRS5770739",
+        "SRA_Run_ID": "SRR10596886",
+        "GEO_Sample_ID": "GSM4205517",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:4158:1209 1:N:0:ATTCAGAA+GCCTCTAT",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "S28abs",
+        "Drug": "Saline",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+
+    "SRS5770740_S28abs": {
+        "Paper": "Carpenter et al. 2020",
+        "Lab_Sample_ID": "SALINE NAC 11",
+        "SRA_Sample_ID": "SRS5770740",
+        "SRA_Run_ID": "SRR10596888",
+        "GEO_Sample_ID": "GSM4205519",
+        "FASTQ_Header": "@K00275:55:HHHJFBBXX:2:1101:32542:1191 1:N:0:TAATGCGC+TCAGAGCC",
+        "Species": "Mus musculus",
+        "Sex": "Male",
+        "Tissue": "Nucleus Accumbens (whole)",
+        "Treatment_Group": "S28abs",
+        "Drug": "Saline",
+        "Abstinence_Length": "28d",
+        "Platform": "Illumina",
+        "Model": "HiSeq 4000",
+        "Read_Length": "150",
+        "Trim_Min_Length": "75"
+    },
+    
     "SRS5770741_S28abs": {
         "Paper": "Carpenter et al. 2020",
         "Lab_Sample_ID": "SALINE NAC 12",

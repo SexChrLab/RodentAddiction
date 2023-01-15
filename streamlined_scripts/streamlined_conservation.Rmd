@@ -440,8 +440,7 @@ outliers.
 ## dN/dS
 Next we will compare dN/dS values for the orthologs of our genes.
 
-```{r, message = FALSE}
-## DN/DS VALUES ----------
+```{r, message = FALSE, warning = FALSE}
 old_ortho <- getBM(attributes = c("external_gene_name", # Gene symbol
                                   "ensembl_gene_id", # Human ENSEMBL
                                   "mmusculus_homolog_ensembl_gene", # Mouse ID
@@ -567,7 +566,9 @@ orthologs in the 2020 and 2022 ENSEMBL versions are the same.
 
 
 ### Plot
-Next, create a plot. *The y axes on these plots have been modified to cap at 3
+Next, create a plot. 
+
+*The y axes on these plots have been modified to cap at 3
 for clarity. To change this, remove the `scale_y_continuous()` function from the
 plots.*
 
@@ -756,17 +757,17 @@ fisher_table <- table(cons2020$Gene_Group, cons2020$Conservation)
 fisher_test <- fisher.test(fisher_table, simulate.p.value = FALSE)
 ```
 
-Statistical results
+Input data (number of genes in each group):
 ```{r}
 fisher_table
 ```
 
-Statistical results
+Statistical results:
 ```{r}
 fisher_test
 ```
 
-There is no statstically significant difference in conservation of developmental
+There is no statistically significant difference in conservation of developmental
 gene expression for our example genes.
 
 
@@ -793,7 +794,7 @@ cm_plot <- cons2020 %>%
   facet_wrap(~ Gene_Group, scales = "free_y", nrow = 1)
 
 if (fisher_test$p.value < 0.001){
-  sig_text <- data.frame(Conservation = c(3, NA), count = c(15, NA), 
+  sig_text <- data.frame(Conservation = c(3, NA), count = c(12, NA), 
                          lab = c(paste0("Significant\n", "p < 0.001"), ""),
                          Gene_Group = factor("My Genes", 
                                              levels = c("My Genes", 
@@ -801,7 +802,7 @@ if (fisher_test$p.value < 0.001){
   cm_plot <- cm_plot + geom_text(data = sig_text, 
                                  aes(x = Conservation, y = count, label = lab))
 } else if (fisher_test$p.value < 0.05){
-  sig_text <- data.frame(Conservation = c(3, NA), count = c(15, NA), 
+  sig_text <- data.frame(Conservation = c(3, NA), count = c(12, NA), 
                          lab = c(paste0("Significant\n", "p = ", 
                                         fisher_test$p.value), ""),
                          Gene_Group = factor("My Genes", 
@@ -810,7 +811,7 @@ if (fisher_test$p.value < 0.001){
   cm_plot <- cm_plot + geom_text(data = sig_text, 
                                  aes(x = Conservation, y = count, label = lab))
 } else {
-  sig_text <- data.frame(Conservation = c(3, NA), count = c(15, NA), 
+  sig_text <- data.frame(Conservation = c(3, NA), count = c(12, NA), 
                          lab = c("Not Significant", ""),
                          Gene_Group = factor("My Genes", 
                                              levels = c("My Genes", 
