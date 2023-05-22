@@ -182,6 +182,7 @@ Post-processing with R is not included in the Snakemake scripts, but there are a
 For RNA-seq processing, the Snakemake scripts will generate most of the directories for you, but you will need to start you will need the following structure and files. You will also need to download FASTQ files from SRA and rename as described above. For each dataset, the final gene counts are located in this repository for convenience (**dataset/gene_counts/**), though they will also be created separately when the scripts are run. * indicates data files that need to be downloaded from SRA by the user. They may need to be renamed by sample before use.
 
 Required starting directory structure:
+
 ```bash
 ├── carpenter
 |   ├── 00_misc_and_scripts
