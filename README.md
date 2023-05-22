@@ -1,7 +1,7 @@
 # RodentAddiction
 Annika Vannan, email: avannan@asu.edu \
 https://github.com/SexChrLab/RodentAddiction \
-Last modified: 01/07/2023
+Last modified: 05/22/2023
 
 ## Project Description
 The purpose of this project is to create a pipeline for prioritizing candidate genes identified from preclinical rodent neuroscience studies based on translational value. Data were obtained from recent publications that attempt to identify genes relevant to drug-motivated behavior in rodent models of cocaine addiction. Data from each paper/experiment are referred to by their first author (e.g. Carpenter data) throughout this README and other files in the directory.
@@ -19,6 +19,12 @@ Scripts:
 2. `streamlined_gtex.R`
 
 The conservation script should be run first in order to get human orthologs for the rodent genes of interest.
+
+There is also a script for running this analysis on another dataset, without re-processing the RNA-seq data:
+Engeln, M., Fox M.E., Chandra, R. *et al.* Transcriptome profiling of the ventral pallidum reveals a role for pallido-thalamic neurons in cocaine reward. *Mol Psychiatry* 27(10):3980-3991. (2022) https://doi.org/10.1038/s41380-022-01668-7
+
+This script can be found under `post_processing/scripts/` under the name `engeln_full.R`, along with a script for comparing priority score distributions between datasets (`comparison.R`).
+
 
 #### Re-running the Project Analyses
 1. Clone this repository.
@@ -196,11 +202,12 @@ The RNA-seq workflow will create directories for each dataset that follow the st
 |   |   ├── gene_info
 |   |   |   ├── carpenter_DE_FINAL.txt
 |   |   |   └── walker_DE_FINAL_treat_batch.txt
-|   |   └── other
-|   |       └── all_genes_list.RDS
 |   └── scripts
 |       ├── candidates_overlaps_homologs.R
-|       ├── gtex_subset_slurm.sh
+|       ├── comparison.R
+|       ├── engeln_full.R
+|       ├── gtex_subset.slurm.sh
+|       ├── gtex_subset_engeln.slurm.sh
 |       ├── individual_conservation.R
 |       ├── individual_gtex.R
 |       ├── individual_orthologs.R

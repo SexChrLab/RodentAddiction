@@ -580,7 +580,7 @@ mouse_dnds_plot <- old_mouse_ortho %>%
                outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
                outlier.fill = "black", outlier.alpha = 0.9) +
   labs(x = "", y = "dN/dS with Human orthoolog\n",
-       title = "Human-Mouse\n") +
+       title = "Mouse-Human\n") +
   scale_x_discrete(expand = c(0, 0.55)) +
   scale_y_continuous(limits = c(0, 3), breaks = seq(0, 3, 0.5), expand = c(0, 0)) +
   scale_fill_manual(values = c("#296D98", "grey80")) +
@@ -613,7 +613,7 @@ rat_dnds_plot <- old_rat_ortho %>%
                outlier.size = 3, outlier.shape = 21, outlier.color = "grey80", 
                outlier.fill = "black", outlier.alpha = 0.9) +
   labs(x = "", y = "dN/dS with Human orthoolog\n",
-       title = "Human-Rat\n") +
+       title = "Rat-Human\n") +
   scale_y_continuous(limits = c(0, 3), breaks = seq(0, 3, 0.5), expand = c(0, 0)) +
   scale_fill_manual(values = c("#296D98", "grey80")) +
   theme(legend.position = "none", axis.ticks.x = element_blank(), 
@@ -843,7 +843,7 @@ Lastly, we will create the final dataframe with all of this information and save
 it as a CSV file.
 
 ```{r, message = FALSE}
-# Get dataframes wit just candidate genes
+# Get dataframes with just candidate genes
 full_old_ortho_candidates <- full_old_ortho %>% filter(Gene_Group == "My Genes")
 full_new_ortho_candidates <- full_new_ortho %>% filter(Gene_Group == "My Genes")
 

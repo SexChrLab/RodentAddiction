@@ -23,7 +23,7 @@ library(doParallel)
 
 # BEFORE USING THIS SCRIPT ----------
 # User should alter these variables as necessary
-main_dir <- "C:/Annika/GitHub Repositories/RodentAddiction/"
+main_dir <- "G:/Noctsol/GitHub Repositories/RodentAddiction/"
 pheno_dir <- paste0(main_dir, "walker/00_misc_and_scripts/miscellaneous/")
 gene_dir <- paste0(main_dir, "walker/00_misc_and_scripts/gene_counts/")
 setwd(paste0(main_dir, "results/"))

@@ -249,8 +249,7 @@ pt_att %>%
 ## LOAD IN BY-TISSUE TPM FILES ----------
 # Get list of files, then load in all files
 subset_files <- list.files(path = paste0(gtex_dir, "count_subsets"), 
-                           pattern = "subset*", full.names = TRUE) %>%
-  .[-1]
+                           pattern = "subset*", full.names = TRUE)
 
 # Tissue names in alphabetical order (except Pituitary last), as a vector
 tissue_ids <- c("Amygdala", "Anterior_Cingulate", "Caudate", "Cerebellar_Hemisphere", 
@@ -675,9 +674,9 @@ bs_plot <- brain_spec %>%
 bs_plot
 
 # Save as svg
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_9_25_2022.svg", width = 4.2, height = 5.5)
-bs_plot
-dev.off()
+# svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/BrainSpec_9_25_2022.svg", width = 4.2, height = 5.5)
+# bs_plot
+# dev.off()
 
 ### STATISTICS ----------
 # Wilcoxon test between groups
@@ -718,14 +717,20 @@ cns_means_df <- gtex %>%
 temp_df <- cld_df %>%
   select(Human_Symbol, Tissue, Group) %>%
   filter(grepl("a", Group)) %>%
+  unique() %>%
   pivot_wider(names_from = Tissue, values_from = Group)
 
-for (cl in names(test)[2:ncol(temp_df)]) {
-  set(temp_df, j = cl, value = fifelse(temp_df[[cl]]==0, NA_character_, cl))
+for (i in 1:nrow(temp_df)){
+  for (cl in colnames(temp_df)[2:ncol(temp_df)]){
+    temp_df[i, cl] <- ifelse(is.na(temp_df[i, cl]), NA_character_, cl)
+  }
 }
 
+temp_df <- temp_df %>%
+  unite(col = "All", 2:ncol(.), sep = ", ", na.rm = TRUE)
+  
 highest_region_df <- cld_df %>%
-  select(Human_Symbol) %>%
+  dplyr::select(Human_Symbol) %>%
   unique() %>%
   mutate(Highest_CNS_Regions = "")
 
@@ -749,10 +754,11 @@ final_df <- full_join(brain_spec, cns_means_df) %>%
   full_join(., highest_region_df) %>%
   full_join(full_cons_df, .) %>%
   filter(Gene_Group != "All Other Orthologs") %>%
-  select(1:18, 23, 25:26)
+  select(1:18, 23, 26, 25)
 # 862 * 21 dimensions
 
-saveRDS(final_df, file = paste0(main_dir, "post_processing/results/other/final_df.RDS"))
+saveRDS(final_df, file = paste0(main_dir, "post_processing/results/other/final_df_05-20-23.RDS"))
+
 
 ## MAKE GTEX PLOTS ----------
 ### TISSUE PLOTS ----------

@@ -189,7 +189,7 @@ full_new_rat_ortho <- Reduce(function(x, y)
 ### STATISTICS ----------
 # Stats comparing each dataset to the ones in no datasets
 stat_mouse_perc <- full_new_mouse_ortho %>%
-  filter(!is.na(MouseToHuman_PercMatch)) %>%
+  filter(!is.na(MouseToHuman_PercMatch), Mouse_Ortho_Type == "ortholog_one2one") %>%
   unique() %>%
   wilcox_test(MouseToHuman_PercMatch ~ Gene_Group, 
               p.adjust.method = "bonferroni") %>%
@@ -197,7 +197,7 @@ stat_mouse_perc <- full_new_mouse_ortho %>%
 stat_mouse_perc
 
 stat_rat_perc <- full_new_rat_ortho %>%
-  filter(!is.na(RatToHuman_PercMatch)) %>%
+  filter(!is.na(RatToHuman_PercMatch), Rat_Ortho_Type == "ortholog_one2one") %>%
   wilcox_test(RatToHuman_PercMatch ~ Gene_Group,
               p.adjust.method = "bonferroni") %>%
   filter(group2 == "All Other Orthologs")
@@ -205,12 +205,12 @@ stat_rat_perc
 
 # Medians
 full_new_mouse_ortho %>%
-  filter(!is.na(MouseToHuman_PercMatch)) %>%
+  filter(!is.na(MouseToHuman_PercMatch), Mouse_Ortho_Type == "ortholog_one2one") %>%
   group_by(Gene_Group) %>%
   summarize(Median = median(MouseToHuman_PercMatch))
 
 full_new_rat_ortho %>%
-  filter(!is.na(RatToHuman_PercMatch)) %>%
+  filter(!is.na(RatToHuman_PercMatch), Rat_Ortho_Type == "ortholog_one2one") %>%
   group_by(Gene_Group) %>%
   summarize(Median = median(RatToHuman_PercMatch))
 
@@ -220,6 +220,7 @@ general_mouse_perc_labels <- c("MUC3A", "XAF1", "ZDBF2",
                                "BST2", "PPP1R15A")
 
 mouse_perc_plot <- full_new_mouse_ortho %>%
+  filter(!is.na(MouseToHuman_PercMatch), Mouse_Ortho_Type == "ortholog_one2one") %>%
   mutate(Gene_Group = as.character(Gene_Group),
          Gene_Group = fct_relevel(case_when(Gene_Group == "All Other Orthologs" ~ "Other",
                                             TRUE ~ Gene_Group),
@@ -253,6 +254,7 @@ general_rat_perc_labels <- c("MUC3A", "XAF1", "ZDBF2",
                              "BST2", "PPP1R15A")
 
 rat_perc_plot <- full_new_rat_ortho %>%
+  filter(!is.na(RatToHuman_PercMatch), Rat_Ortho_Type == "ortholog_one2one") %>%
   mutate(Gene_Group = as.character(Gene_Group),
          Gene_Group = fct_relevel(case_when(Gene_Group == "All Other Orthologs" ~ "Other",
                                             TRUE ~ Gene_Group),
@@ -280,7 +282,7 @@ rat_perc_plot <- full_new_rat_ortho %>%
                    aes(label = label, fill = Gene_Group), color = "black",
                    box.padding = 0.35, fontface = "bold", size = 3, seed = 495)
 
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/PercPlot_09-25-2022.svg", width = 9, height = 4)
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/PercPlot_05-20-2023.svg", width = 9, height = 4)
 ggarrange(mouse_perc_plot, rat_perc_plot)
 dev.off()
 
@@ -407,14 +409,14 @@ full_old_rat_ortho <- Reduce(function(x, y)
 ### STATISTICS ----------
 # Stats comparing each dataset to the ones in no datasets
 stat_mouse_dnds <- full_old_mouse_ortho %>%
-  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf) %>%
+  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf, Mouse_Ortho_Type == "ortholog_one2one") %>%
   wilcox_test(Mouse_DNDS ~ Gene_Group, p.adjust.method = "bonferroni") %>%
   filter(group2 == "All Other\nOrthologs")
 stat_mouse_dnds
 
 # Medians
 full_old_mouse_ortho %>%
-  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf) %>%
+  filter(!is.na(Mouse_DNDS), Mouse_DNDS != Inf, Mouse_Ortho_Type == "ortholog_one2one") %>%
   group_by(Gene_Group) %>%
   summarize(Median = median(Mouse_DNDS))
 
@@ -662,7 +664,8 @@ full_all_cons_df <- full_old_ortho %>%
   mutate(across(everything(), function(x) na_if(x, ""))) %>%
   left_join(full_cons2020_with_incompletes) %>%
   droplevels() %>%
-  mutate(Ensembl_106_Mouse_ID = "Same as Ensembl release 106") %>%
+  mutate(Ensembl_106_Mouse_ID = ifelse(Ensembl_106_Mouse_ID == Ensembl_99_Mouse_ID,
+                                       "Same as Ensembl release 99", Ensembl_106_Mouse_ID)) %>%
   select(1:4, 7, 9, 5, 10:11, 30, 13:15, 12, 16, 17:18, 29)
 
 # Subset to only candidates
@@ -674,8 +677,9 @@ saveRDS(full_cons_df, file = file.path(main_dir, "post_processing/results/other/
 
 
 ## STATISTICAL ANALYSIS FOR RAT DN/DS ----------
-# NOTE: Only those rat orthologs that were consistent between Ensembl versions 
-# were included in the statistical analysis.
+# NOTE: A second version of the analysis was performed with only those rat
+# orthologs that were consistent between Ensembl versions were included in the 
+# statistical analysis.
 
 # All orthologs
 stat_rat_dnds <- full_old_rat_ortho %>%
@@ -688,6 +692,11 @@ full_old_rat_ortho %>%
   filter(!is.na(Rat_DNDS), Rat_DNDS != Inf) %>%
   group_by(Gene_Group) %>%
   summarize(Median = median(Rat_DNDS))
+dnds_rat_outliers <- full_old_rat_ortho %>%
+  filter(!is.na(Rat_DNDS), Rat_DNDS != Inf) %>%
+  group_by(Gene_Group) %>%
+  mutate(outlier = is_outlier(Rat_DNDS)) %>%
+  filter(outlier == TRUE)
 
 # Only orthologs consistent between versions
 consistent_hs_ids <- full_all_cons_df %>% 
@@ -753,7 +762,7 @@ rat_dnds_plot <- full_old_rat_ortho %>%
          Gene_Group = fct_relevel(case_when(Gene_Group == "All Other\nOrthologs" ~ "All Other Orthologs",
                                             TRUE ~ Gene_Group),
                                   levels = c("Carpenter", "Walker", "All Other Orthologs"))) %>%
-  filter(!is.na(Rat_DNDS), Rat_DNDS != Inf, Human_ID %in% consistent_hs_ids) %>%
+  filter(!is.na(Rat_DNDS), Rat_DNDS != Inf) %>%
   ggplot(aes(x = Gene_Group, y = Rat_DNDS)) +
   geom_violin(aes(fill = Gene_Group), width = 0.75) +  
   geom_boxplot(fill = "white", color = "black", width = 0.18, 
@@ -762,7 +771,7 @@ rat_dnds_plot <- full_old_rat_ortho %>%
   labs(x = "", y = "dN/dS with Human ortholog",
        title = "Rat-Human") +
   scale_y_continuous(limits = c(0, 1.63), breaks = seq(0, 1.6, 0.4), expand = c(0, 0)) +
-  scale_fill_manual(values = c("#44AA99", "#C148AD", "#DDCC77", "grey60")) +
+  scale_fill_manual(values = c("#44AA99", "#C148AD", "grey60")) +
   theme(legend.position = "none", axis.ticks.x = element_blank(), 
         panel.grid.major.x = element_blank(),
         panel.grid.major.y = element_line(color = "grey65"),
@@ -781,7 +790,7 @@ rat_dnds_plot <- full_old_rat_ortho %>%
 # Outliers: LPA (3.49)
 
 # Save plots
-svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Cons_DNDS_9_25_2022.svg", width = 9, height = 4)
+svglite("C:/Users/Annika/Documents/Figures for Gene Conservation Project/Cons_DNDS_05_20_2023.svg", width = 9, height = 4)
 ggarrange(mouse_dnds_plot, rat_dnds_plot)
 dev.off()
 

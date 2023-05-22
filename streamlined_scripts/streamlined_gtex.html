@@ -335,7 +335,7 @@ rm(&quot;BRN.AMY&quot;, &quot;BRN.ACC&quot;, &quot;BRN.CAU&quot;, &quot;BRN.CB.a
    &quot;BRN.CTX.a&quot;, &quot;BRN.HIPP&quot;, &quot;BRN.HYP&quot;, &quot;BRN.NAC&quot;, &quot;BRN.PUT&quot;, &quot;BRN.SPC&quot;)
 gc() # Clear unused memory</code></pre>
 <pre><code>##            used  (Mb) gc trigger   (Mb)  max used   (Mb)
-## Ncells  1364756  72.9    3861098  206.3  14728912  786.7
+## Ncells  1364756  72.9    3861089  206.3  14728882  786.7
 ## Vcells 51345041 391.8  202626477 1546.0 253283096 1932.4</code></pre>
 <pre class="r"><code># Create dataframe from modified tissue lists
 tissue_df &lt;- Reduce(function(x, y) 
@@ -346,7 +346,7 @@ tissue_df &lt;- Reduce(function(x, y)
 rm(tissue_list)
 gc()</code></pre>
 <pre><code>##            used  (Mb) gc trigger   (Mb)  max used   (Mb)
-## Ncells  1369125  73.2    3861098  206.3  14728912  786.7
+## Ncells  1369125  73.2    3861089  206.3  14728882  786.7
 ## Vcells 51318427 391.6  162101182 1236.8 253283096 1932.4</code></pre>
 <p>We will also need to load in the GTEx metadata. This script is designed so that no one needs special access to GTEx to use it. For example, in the manuscript we only compared males and females who were 55 years of age or older. However, exact ages are not available in the freely accessible GTEx data, only ranges. Here, we will compare participants 50+ and get age matches based on ranges.</p>
 <p>If you have access to the protected access GTEx data, use the file “participant.tsv” to find participants 55 or older and age match them before proceeding. Code to do this can be found in the original <code>individual_gtex.R</code> file, which processes data from the manuscript.</p>
