@@ -177,61 +177,37 @@ Carpenter FASTQ files should be located in the **carpenter/01_fastq** directory.
 For all datasets, FASTQ files were trimmed with the following parameters: `qtrim=rl trimq=30 minlen={half of read length} maq=20`. Based on the FastQC output, there were some additional trimming parameters for Walker. Additional adapters were trimmed by adding them to the adapters file included with BBDuk - this modified file is called `adapters_overrepresented.fa` and is located in the miscellaneous files for Walker. 
 
 ### Directory Structure & Obtaining Additional Files
-The RNA-seq workflow will create directories for each dataset that follow the structures outlined in the 00_misc folder for each dataset. Snakemake will generate most of the directories for you, but to start you will need the following structure and files. You will also need to download FASTQ files from SRA and rename as described above. For each dataset, the final gene counts are located in this repository for convenience (**dataset/gene_counts/**), though they will also be created separately when the scripts are run. * indicates data files that need to be downloaded from SRA by the user. They may need to be renamed by sample before use.
+Post-processing with R is not included in the Snakemake scripts, but there are additional scripts that can be run individually (see `carpenter/00_misc_and_scripts/final_carpenter_DE.R`, `walker/00_misc_and_scripts/final_walker_DE.R`, `post_processing/scripts/`, and `streamlined_scripts/`).
 
+For RNA-seq processing, the Snakemake scripts will generate most of the directories for you, but you will need to start you will need the following structure and files. You will also need to download FASTQ files from SRA and rename as described above. For each dataset, the final gene counts are located in this repository for convenience (**dataset/gene_counts/**), though they will also be created separately when the scripts are run. * indicates data files that need to be downloaded from SRA by the user. They may need to be renamed by sample before use.
+
+Required starting directory structure:
 ```bash
 ├── carpenter
 |   ├── 00_misc_and_scripts
 │   |   ├── gene_counts
 |   |   |   └── carpenter_{sample}_hisat2_featurecounts_genes_s2.txt (12 files)
-│   |   ├── miscellaneous
-│   |   |   ├── carpenter_file_sizes.txt
-│   |   |   └── carpenter_pheno.csv
 |   |   └── scripts
 │   |       ├── carpenter_01_fastq_02_trimmed_fastq.snk
 │   |       ├── carpenter_03_alignment_04_processing.snk
 |   |       ├── carpenter_03_alignment_SALMON.snk
 │   |       ├── carpenter_05_counts.snk
-│   |       ├── carpenter_config.json
-|   |       └── final_carpenter_DE.R
+│   |       └── carpenter_config.json
 |   └── 01_fastq
 |       ├── carpenter_{sample}_fq1.fastq (12 files) *
 |       └── carpenter_{sample}_fq2.fastq (12 files) *
-├── post_processing
-|   ├── results
-|   |   ├── gene_info
-|   |   |   ├── carpenter_DE_FINAL.txt
-|   |   |   └── walker_DE_FINAL_treat_batch.txt
-|   └── scripts
-|       ├── candidates_overlaps_homologs.R
-|       ├── comparison.R
-|       ├── engeln_full.R
-|       ├── gtex_subset.slurm.sh
-|       ├── gtex_subset_engeln.slurm.sh
-|       ├── individual_conservation.R
-|       ├── individual_gtex.R
-|       ├── individual_orthologs.R
-|       └── power_analysis.R
-├── streamlined scripts
-|   ├── streamlined_conservation.html
-|   ├── streamlined_conservation.R
-|   ├── streamlined_gtex.html
-|   └── streamlined_gtex.R
 └── walker
     ├── 00_misc_and_scripts
     |   ├── gene_counts
     |   |   └── walker_{sample}_hisat2_featurecounts_genes_s2.txt (11 files)
     |   ├── miscellaneous
-    |   |   ├── adapters_overrepresented.fa
-    |   |   ├── walker_file_sizes.txt
-    |   |   └── walker_pheno.csv
+    |   |   └── adapters_overrepresented.fa
     |   └── scripts
     |       ├── walker_01_fastq_02_trimmed_fastq.snk
     |       ├── walker_03_alignment_04_processing.snk
     |       ├── walker_03_alignment_SALMON.snk
     |       ├── walker_05_counts.snk
-    |       ├── walker_config.json
-    |       └── final_walker_DE.R
+    |       └── walker_config.json
     └── 01_fastq
         ├── by_run
         |   └── walker_{sample}_run{1-8}.fastq (80 files; 10 samples) *
